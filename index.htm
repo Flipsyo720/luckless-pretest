@@ -1,1 +1,2414 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Luckless</title>
+<style>
+/* Luckless: one dark, star-lit look, so the tokens are set once on :root */
+[hidden] { display: none !important; }
+:root {
+  color-scheme: dark;
+  --bg: #04050d;
+  --ink: #e8ecff;
+  --dim: #7d86b3;
+  --line: rgba(160, 175, 255, .16);
+  --panel: rgba(12, 14, 32, .72);
+  --accent: #8fa4ff;
+}
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+}
 
+/* ---------- background ---------- */
+.nebula {
+  position: fixed; inset: -60px; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(45% 40% at 30% 35%, rgba(124, 77, 255, .22), transparent 70%),
+    radial-gradient(40% 35% at 72% 68%, rgba(0, 229, 255, .14), transparent 70%);
+  transform: translate3d(calc(var(--px, 0) * -26px), calc(var(--py, 0) * -26px), 0);
+}
+#stars { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+
+/* ---------- main screen ---------- */
+.wrap {
+  position: relative; z-index: 2;
+  min-height: 100%; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 32px;
+  padding-inline: 16px; padding-block: 48px;
+  text-align: center;
+}
+.brand {
+  margin: 0; font-size: .85rem; font-weight: 600;
+  letter-spacing: .5em; text-transform: uppercase; color: var(--dim);
+}
+.cards {
+  display: grid; grid-template-columns: 1fr; gap: 14px;
+  width: min(560px, 100%); box-sizing: border-box;
+}
+@media (min-width: 560px) { .cards { grid-template-columns: 1fr 1fr; } }
+.card {
+  margin: 0; min-width: 0; box-sizing: border-box;
+  min-height: 150px; padding: 20px 18px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  border: 1px solid var(--line); border-radius: 16px;
+  background: var(--panel); backdrop-filter: blur(6px);
+}
+.card.pop { animation: pop .5s cubic-bezier(.2, 1.4, .4, 1); }
+.label {
+  margin: 0; font-size: .7rem; letter-spacing: .25em;
+  text-transform: uppercase; color: var(--dim);
+}
+.tier { margin: 0; font-size: .85rem; color: var(--dim); }
+.item {
+  margin: 0; max-width: 100%;
+  font-size: clamp(1.4rem, 5.5vw, 2.1rem); font-weight: 700; line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.roll {
+  font: inherit; font-size: 1.05rem; font-weight: 700;
+  letter-spacing: .35em; text-transform: uppercase;
+  padding: 18px 56px 18px 62px;
+  color: var(--ink); background: rgba(143, 164, 255, .08);
+  border: 1px solid var(--accent); border-radius: 999px; cursor: pointer;
+  box-shadow: 0 0 28px -8px var(--accent), inset 0 0 22px -12px var(--accent);
+  transition: transform .15s, box-shadow .2s, background .2s;
+}
+.roll:hover:not(:disabled) {
+  background: rgba(143, 164, 255, .16);
+  box-shadow: 0 0 40px -6px var(--accent), inset 0 0 22px -10px var(--accent);
+}
+.roll:active:not(:disabled) { transform: scale(.97); }
+.roll:disabled { opacity: .4; cursor: default; }
+
+.tiers-btn, .ghost {
+  font: inherit; font-size: .75rem; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--ink); background: transparent;
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: 8px 14px; cursor: pointer;
+}
+.tiers-btn {
+  position: fixed; top: calc(14px + env(safe-area-inset-top, 0px)); right: 14px; z-index: 19;
+}
+.roll:focus-visible, .tiers-btn:focus-visible, .ghost:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 4px;
+}
+
+/* ---------- slide-out tier drawer ---------- */
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 20;
+  width: min(360px, 88vw); box-sizing: border-box;
+  display: flex; flex-direction: column;
+  background: rgba(6, 7, 20, .93); backdrop-filter: blur(10px);
+  border-left: 1px solid var(--line);
+  visibility: hidden; transform: translateX(104%);
+  transition: transform .45s cubic-bezier(.2, .8, .2, 1), visibility .45s;
+}
+.drawer.open { visibility: visible; transform: none; }
+.drawer-head {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 18px; border-bottom: 1px solid var(--line);
+}
+.drawer-head h2 {
+  margin: 0; font-size: .85rem; letter-spacing: .25em; text-transform: uppercase;
+}
+.count { margin: 4px 0 0; font-size: .75rem; color: var(--dim); font-variant-numeric: tabular-nums; }
+.tier-list {
+  flex: 1; min-height: 0; margin: 0; padding: 6px 18px 28px;
+  list-style: none; overflow-y: auto; overscroll-behavior: contain;
+}
+.tier-list li {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 12px 0; border-bottom: 1px dashed var(--line);
+}
+.tier-list .fx { min-width: 0; font-size: 1rem; }
+.meta {
+  font-size: .75rem; color: var(--dim); white-space: nowrap;
+  letter-spacing: .08em; font-variant-numeric: tabular-nums;
+}
+
+/* ---------- cutscene overlay ---------- */
+.cut {
+  position: fixed; inset: 0; z-index: 10; overflow: hidden; cursor: pointer;
+  display: grid; justify-items: center; align-content: end; gap: 18px;
+  padding: 0 16px calc(16vh + env(safe-area-inset-bottom, 0px));
+  background: rgba(2, 3, 10, .2);
+  animation: fadeIn .25s ease-out;
+}
+#fx { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+.cut-title, #cutBigWrap, .slots {
+  position: relative; z-index: 1; margin: 0;
+  text-align: center;
+}
+.cut-title { font-size: .8rem; letter-spacing: .3em; text-transform: uppercase; }
+.cut-big {
+  margin: 0; font-size: clamp(2rem, 9vw, 5rem); font-weight: 800; line-height: 1.05;
+  overflow-wrap: anywhere; text-align: center;
+}
+.slots {
+  display: flex; align-items: baseline; justify-content: center; flex-wrap: wrap;
+  font-size: clamp(3rem, 15vw, 8.5rem); font-weight: 800; line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.slot {
+  display: inline-block; min-width: .72em; text-align: center; color: #fff;
+  text-shadow: 0 0 22px #00ffb3, 0 0 4px #fff;
+}
+.slot.land { animation: slam .45s cubic-bezier(.2, 1.6, .4, 1) both; }
+.cut-hint {
+  position: absolute; left: 0; right: 0; bottom: calc(4vh + env(safe-area-inset-bottom, 0px));
+  z-index: 1; margin: 0; font-size: .7rem; letter-spacing: .3em; text-transform: uppercase;
+  color: var(--dim); text-align: center;
+}
+
+/* ---------- item text effects (the colour comes from --c) ---------- */
+.fx { display: inline-block; max-width: 100%; color: var(--c, #fff); overflow-wrap: anywhere; line-height: 1.15; }
+
+.fx-neon { color: #fff; text-shadow: 0 0 4px var(--c), 0 0 12px var(--c), 0 0 28px var(--c); animation: neon 3s ease-in-out infinite; }
+@keyframes neon { 50% { text-shadow: 0 0 2px var(--c), 0 0 6px var(--c), 0 0 14px var(--c); } }
+
+.fx-gold, .fx-shimmer {
+  background-size: 300% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: sheen 3.6s linear infinite;
+  filter: drop-shadow(0 0 6px var(--c));
+}
+.fx-gold { background-image: linear-gradient(105deg, #7a5200 30%, #fff6c8 47%, #ffb300 55%, #7a5200 72%); }
+.fx-shimmer { background-image: linear-gradient(105deg, var(--c) 35%, #ffffff 50%, var(--c) 65%); }
+@keyframes sheen { to { background-position: 150% 0; } }
+
+.fx-rainbow, .fx-aurora {
+  background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: flow 5s linear infinite;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, .25));
+}
+.fx-rainbow { background-image: linear-gradient(90deg, #ff004c, #ffb300, #fff176, #00e676, #00b0ff, #7c4dff, #ff004c); }
+.fx-aurora { background-image: linear-gradient(90deg, #00e676, #00b0ff, #7c4dff, #00e676); }
+@keyframes flow { to { background-position: 200% 0; } }
+
+.fx-chroma { color: #fff; animation: chroma 1.8s ease-in-out infinite; }
+@keyframes chroma {
+  0%, 100% { text-shadow: -2px 0 #ff0040, 2px 0 #00e5ff, 0 0 12px var(--c); }
+  50% { text-shadow: -5px 1px #ff0040, 5px -1px #00e5ff, 0 0 26px var(--c); }
+}
+
+.fx-wave .ch {
+  display: inline-block; color: var(--c); text-shadow: 0 0 10px var(--c);
+  animation: bob 1.8s ease-in-out infinite;
+  animation-delay: calc(var(--i) * .07s);
+}
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-.22em); } }
+
+.fx-flicker { color: var(--c); text-shadow: 0 0 6px var(--c), 0 0 22px var(--c); animation: flick 2.4s infinite; }
+@keyframes flick {
+  0%, 18%, 22%, 26%, 54%, 58%, 100% { opacity: 1; }
+  20%, 24%, 56% { opacity: .3; }
+}
+
+.fx-ember {
+  background-image: linear-gradient(to top, #ff3d00, #ffab00 55%, #fff59d);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 8px #ff6d00);
+  animation: ember 2.2s ease-in-out infinite alternate;
+}
+@keyframes ember { to { filter: drop-shadow(0 -5px 14px #ff3d00); } }
+
+.fx-void {
+  color: #0a0014; -webkit-text-stroke: 1px var(--c);
+  text-shadow: 0 0 12px var(--c), 0 0 34px rgba(0, 0, 0, .9);
+  animation: voidp 3.6s ease-in-out infinite;
+}
+@keyframes voidp {
+  50% { text-shadow: 0 0 22px var(--c), 0 0 46px var(--c); -webkit-text-stroke-color: #fff; }
+}
+
+.fx-hologram {
+  background-image: repeating-linear-gradient(0deg, var(--c) 0 2px, rgba(255, 255, 255, .85) 2px 3px, var(--c) 3px 5px);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 6px var(--c));
+  animation: holo 2.6s steps(2, end) infinite;
+}
+@keyframes holo { 50% { opacity: .65; } }
+
+.fx-frost { color: var(--c); text-shadow: 0 0 4px #fff, 0 0 18px #80d8ff; animation: frost 4.2s ease-in-out infinite; }
+@keyframes frost { 50% { text-shadow: 0 0 2px #fff, 0 0 34px #80d8ff, 0 0 60px #00b0ff; } }
+
+.fx-pulse { color: var(--c); text-shadow: 0 0 10px var(--c); animation: breathe 2.4s ease-in-out infinite; }
+@keyframes breathe { 50% { transform: scale(1.07); text-shadow: 0 0 22px var(--c), 0 0 4px #fff; } }
+
+.fx-glitch { position: relative; color: var(--c); animation: jitter 2.8s steps(1, end) infinite; }
+.fx-glitch::before, .fx-glitch::after {
+  content: attr(data-text); position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+  overflow: hidden; pointer-events: none;
+}
+.fx-glitch::before { color: #00ffff; animation: slice1 2.2s steps(1, end) infinite; }
+.fx-glitch::after { color: #ff00aa; animation: slice2 2.6s steps(1, end) infinite; }
+@keyframes jitter {
+  0%, 90%, 100% { transform: none; }
+  92% { transform: translateX(-3px); }
+  96% { transform: translateX(3px) skewX(-4deg); }
+}
+@keyframes slice1 {
+  0% { clip-path: inset(10% 0 80% 0); transform: translateX(-3px); }
+  25% { clip-path: inset(55% 0 25% 0); transform: translateX(3px); }
+  50% { clip-path: inset(30% 0 60% 0); transform: translateX(-2px); }
+  75% { clip-path: inset(80% 0 5% 0); transform: translateX(2px); }
+}
+@keyframes slice2 {
+  0% { clip-path: inset(70% 0 10% 0); transform: translateX(3px); }
+  30% { clip-path: inset(20% 0 65% 0); transform: translateX(-3px); }
+  60% { clip-path: inset(45% 0 40% 0); transform: translateX(2px); }
+  85% { clip-path: inset(5% 0 85% 0); transform: translateX(-2px); }
+}
+
+/* dimension: the text slowly warps, then settles back */
+.fx-warp { color: var(--c); text-shadow: 0 0 14px var(--c); animation: warp 9s ease-in-out infinite; }
+@keyframes warp {
+  0%, 60%, 100% { transform: none; letter-spacing: 0; filter: none; }
+  30% { transform: perspective(360px) rotateX(48deg) skewX(-16deg) scaleY(1.5); letter-spacing: .22em; filter: hue-rotate(150deg) blur(1px); }
+}
+
+/* ---------- motion ---------- */
+@keyframes pop { from { transform: scale(.92); opacity: .2; } to { transform: none; opacity: 1; } }
+@keyframes fadeIn { from { opacity: 0; } }
+@keyframes zoomIn {
+  from { transform: scale(2.2); opacity: 0; filter: blur(10px); }
+  60% { transform: scale(.95); opacity: 1; filter: none; }
+  to { transform: none; }
+}
+@keyframes slam {
+  0% { transform: scale(2.4); opacity: 0; filter: blur(8px); }
+  55% { transform: scale(.9); opacity: 1; filter: none; }
+  100% { transform: scale(1); }
+}
+#cutBigWrap:not([hidden]) { animation: zoomIn .8s cubic-bezier(.2, 1.4, .4, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001s !important; animation-iteration-count: 1 !important; }
+}
+
+/* Round 2: the cutscene stage is solid black, and the drawer lists tier titles over their items */
+.cut { display: block; padding: 0; background: #000; animation: none; }
+#cutInner {
+  position: absolute; inset: 0; z-index: 1;
+  display: grid; justify-items: center; align-content: end; gap: 18px;
+  padding: 0 16px calc(16vh + env(safe-area-inset-bottom, 0px));
+}
+.tier-list { padding: 4px 18px 28px; }
+.tier-block { content-visibility: auto; contain-intrinsic-size: auto 420px; }
+.tier-head {
+  display: flex; align-items: center; gap: 10px; margin: 0; padding: 18px 0 6px;
+  font-size: .8rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+}
+.tier-head > span:first-child { order: 0; }
+.tier-head::after { content: ''; order: 1; flex: 1; min-width: 12px; border-bottom: 1px dashed var(--line); }
+.tier-head .meta { order: 2; }
+.item-list { list-style: none; margin: 0; padding: 0 0 0 4px; }
+.item-list li { padding: 5px 0; font-size: 1rem; }
+.item-list .fx { min-width: 0; }
+
+/* Round 3: black throughout, the charge bar, and the virtual tier rows (every row is 30 px) */
+:root {
+  --bg: #000000;
+  --ink: #f2f2f2;
+  --dim: #8c8c8c;
+  --line: rgba(255, 255, 255, .14);
+  --panel: #000000;
+  --accent: #ffffff;
+}
+body { background: #000; }
+.nebula { display: none; }
+.card { background: #000; border-color: rgba(255, 255, 255, .18); backdrop-filter: none; }
+.roll { background: #000; }
+.roll:hover:not(:disabled) { background: #0b0b0b; }
+.tiers-btn, .ghost { background: #000; border-color: rgba(255, 255, 255, .22); }
+
+/* ---------- drawer: the header stays put, and the list below it scrolls ---------- */
+.drawer { background: #000; border-left-color: rgba(255, 255, 255, .14); backdrop-filter: none; }
+.drawer-head { border-bottom-color: rgba(255, 255, 255, .14); }
+.tier-list {
+  position: relative; flex: 1; min-height: 0; margin: 0;
+  padding: 0 18px 28px; overflow-y: auto; overscroll-behavior: contain;
+}
+#tierWin { position: absolute; top: 0; left: 18px; right: 18px; }
+.trow {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  box-sizing: border-box; height: 30px; overflow: hidden; white-space: nowrap;
+}
+.trow .fx { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.trow.head {
+  border-top: 1px solid rgba(255, 255, 255, .14);
+  font-size: .72rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+}
+.trow.item {
+  padding-left: 12px; font-size: .95rem;
+  border-left: 1px solid rgba(255, 255, 255, .08);
+}
+
+/* ---------- charge bar along the bottom of the cutscene ---------- */
+.charge {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
+  background: rgba(255, 255, 255, .1);
+}
+#chargeFill {
+  display: block; height: 100%; width: 100%;
+  transform-origin: left center; transform: scaleX(0);
+  box-shadow: 0 0 14px rgba(255, 255, 255, .8);
+}
+#chargeNum {
+  position: absolute; right: 16px; bottom: 12px; margin: 0;
+  font-size: .7rem; font-weight: 600; letter-spacing: .2em;
+  font-variant-numeric: tabular-nums; color: var(--dim);
+}
+
+/* Round 4: the branch of every tier, its panels, the reset check, achievement toasts and the black veil.
+   Stacking, bottom to top: nebula 0, stars 1, main screen 2, branch 15, tooltip and HUD 16, cutscene 17,
+   veil 18, side panels 20, toasts 25, reset check 30. */
+
+.tiers-btn { z-index: 16; }
+.cut { z-index: 17; }
+body.in-branch .wrap, body.in-branch .tiers-btn { visibility: hidden; }
+
+/* ---------- the branch ---------- */
+#branch { position: fixed; inset: 0; z-index: 15; touch-action: none; cursor: default; }
+#branchHud {
+  position: fixed; top: calc(14px + env(safe-area-inset-top, 0px)); left: 14px; z-index: 16;
+  display: none; flex-direction: column; align-items: flex-start; gap: 8px;
+  pointer-events: none;
+}
+body.in-branch #branchHud { display: flex; }
+#branchHud button { pointer-events: auto; }
+#branchCount {
+  margin: 0; font-size: .75rem; letter-spacing: .15em; text-transform: uppercase;
+  color: var(--ink); font-variant-numeric: tabular-nums; text-shadow: 0 0 8px #000;
+}
+#branchHud .hint { margin: 0; font-size: .7rem; color: var(--dim); letter-spacing: .04em; text-shadow: 0 0 8px #000; }
+
+#tip {
+  position: fixed; left: 0; top: 0; z-index: 16; pointer-events: none;
+  max-width: min(280px, calc(100vw - 24px)); box-sizing: border-box;
+  padding: 10px 12px; border: 1px solid rgba(255, 255, 255, .2); border-radius: 12px;
+  background: rgba(0, 0, 0, .9); color: var(--ink);
+  font-size: .8rem; line-height: 1.45;
+}
+#tip strong { display: block; margin-bottom: 2px; font-size: .95rem; }
+#tip div { color: var(--dim); }
+
+/* ---------- the black veil: fades in and out with CSS, so the page never jumps ---------- */
+#veil {
+  position: fixed; inset: 0; z-index: 18; background: #000;
+  opacity: 0; pointer-events: none; transition: opacity .6s ease;
+}
+#veil.on { opacity: 1; pointer-events: auto; }
+
+/* ---------- side panels: a tier's items, and the achievements ---------- */
+#tierPanel, #achPanel {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 20;
+  box-sizing: border-box; width: min(400px, 92vw); overflow-y: auto; overscroll-behavior: contain;
+  padding: calc(18px + env(safe-area-inset-top, 0px)) 18px calc(18px + env(safe-area-inset-bottom, 0px));
+  background: rgba(0, 0, 0, .94); border-left: 1px solid var(--line);
+  visibility: hidden; transform: translateX(104%);
+  transition: transform .5s cubic-bezier(.2, .8, .2, 1), visibility .5s;
+}
+#tierPanel.open, #achPanel.open { visibility: visible; transform: none; }
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.panel-head h2 {
+  margin: 0; min-width: 0; font-size: .85rem; letter-spacing: .25em;
+  text-transform: uppercase; overflow-wrap: anywhere;
+}
+#tierTitle {
+  font-size: clamp(1.1rem, 4.5vw, 1.5rem); letter-spacing: .04em; text-transform: none; line-height: 1.2;
+}
+#tierMeta { margin-bottom: 0; }
+#tierItems { margin: 14px 0 0; padding: 0 0 0 2.4em; font-size: 1rem; }
+#tierItems li { padding: 8px 0; border-bottom: 1px dashed var(--line); overflow-wrap: anywhere; }
+
+.ach-list { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+.ach-list li {
+  display: grid; gap: 2px; min-width: 0; box-sizing: border-box;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px;
+}
+.ach-list li strong { font-size: .95rem; }
+.ach-list li span { font-size: .8rem; color: var(--dim); overflow-wrap: anywhere; }
+.ach-list li.got { border-color: rgba(255, 215, 64, .5); }
+.ach-list li.got strong { color: #ffd740; }
+
+/* ---------- achievement toasts: top right, slide in from the left and fade in, then back out ---------- */
+#toasts {
+  position: fixed; top: calc(62px + env(safe-area-inset-top, 0px)); right: 14px; z-index: 25;
+  display: grid; gap: 10px; width: min(300px, calc(100vw - 28px)); pointer-events: none;
+}
+.toast {
+  display: grid; gap: 2px; min-width: 0; box-sizing: border-box; padding: 12px 14px;
+  border: 1px solid rgba(255, 215, 64, .55); border-radius: 12px; background: rgba(0, 0, 0, .92);
+  box-shadow: 0 0 22px rgba(255, 215, 64, .2);
+  transform: translateX(-60px); opacity: 0;
+  transition: transform .5s cubic-bezier(.2, .8, .2, 1), opacity .5s ease;
+}
+.toast.in { transform: none; opacity: 1; }
+.toast strong { font-size: .85rem; color: #ffd740; }
+.toast span { font-size: .8rem; color: var(--ink); overflow-wrap: anywhere; }
+
+/* ---------- reset: "Are you sure?" ---------- */
+#confirm {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-items: center;
+  box-sizing: border-box; padding: 16px; background: rgba(0, 0, 0, .7);
+}
+.confirm-box {
+  width: min(340px, 100%); box-sizing: border-box; padding: 22px 20px; text-align: center;
+  background: #000; border: 1px solid rgba(255, 82, 82, .5); border-radius: 16px;
+  box-shadow: 0 0 40px -10px rgba(255, 82, 82, .5);
+}
+.confirm-title { margin: 0 0 8px; font-size: 1.3rem; font-weight: 700; }
+.confirm-text { margin: 0 0 18px; font-size: .85rem; line-height: 1.5; color: var(--dim); }
+.confirm-btns { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
+.danger { border-color: #ff5252; color: #ff8a80; }
+</style>
+<div class="nebula" aria-hidden="true"></div>
+<canvas id="stars" aria-hidden="true"></canvas>
+
+<main class="wrap">
+  <h1 class="brand">Luckless</h1>
+
+  <section class="cards">
+    <article class="card" id="recentCard">
+      <p class="label">Most recent</p>
+      <p class="tier" id="recentTier">—</p>
+      <p class="item"><span id="recentItem"></span></p>
+    </article>
+    <article class="card" id="bestCard">
+      <p class="label">Best roll</p>
+      <p class="tier" id="bestTier">—</p>
+      <p class="item"><span id="bestItem"></span></p>
+    </article>
+  </section>
+
+  <button class="roll" id="rollBtn" type="button">Roll</button>
+</main>
+
+<button class="tiers-btn" id="tiersBtn" type="button">Tiers</button>
+
+<canvas id="branch" hidden aria-label="Every tier, growing from the centre. Move the mouse to look around, and click a tier to open it."></canvas>
+<div id="tip" hidden></div>
+<div id="branchHud">
+  <p id="branchCount"></p>
+  <p class="hint">Move your mouse to look around · click a tier</p>
+  <button class="ghost" id="branchClose" type="button">Close</button>
+</div>
+
+<div class="cut" id="cut" hidden>
+  <canvas id="fx" aria-hidden="true"></canvas>
+  <div id="cutInner">
+    <p class="cut-title"><span id="cutTitle"></span></p>
+    <div id="cutBigWrap" hidden><p class="cut-big" id="cutBig"></p></div>
+    <div class="slots" id="slots" hidden></div>
+    <p class="cut-hint">Click to skip</p>
+  </div>
+</div>
+
+<aside id="tierPanel" aria-label="Items in this tier">
+  <div class="panel-head">
+    <h2 id="tierTitle"></h2>
+    <button class="ghost" id="tierClose" type="button">Close</button>
+  </div>
+  <p class="count" id="tierMeta"></p>
+  <ol id="tierItems"></ol>
+</aside>
+
+<aside id="achPanel" aria-label="Achievements">
+  <div class="panel-head">
+    <h2>Achievements</h2>
+    <button class="ghost" id="achClose" type="button">Close</button>
+  </div>
+  <p class="count" id="achCount"></p>
+  <ul class="ach-list" id="achList"></ul>
+</aside>
+
+<div id="confirm" hidden role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+  <div class="confirm-box">
+    <p class="confirm-title" id="confirmTitle">Are you sure?</p>
+    <p class="confirm-text">This clears every item you have found, your best roll and your achievements.</p>
+    <div class="confirm-btns">
+      <button class="ghost" id="confirmNo" type="button">Nevermind</button>
+      <button class="ghost danger" id="confirmYes" type="button">Yes</button>
+    </div>
+  </div>
+</div>
+
+<div id="toasts" aria-live="polite"></div>
+<div id="veil" aria-hidden="true"></div>
+<script>
+// ---------- data and tiers ----------
+const DATA = {"rarity_ranks": ["Common", "Uncommon", "Good", "Better", "Rare", "Rarer", "Ultra Rare", "Legendary", "Apex", "Heavenly", "Advanced", "Half god", "God"], "scaled_section": ["A Scaled", "B Scaled", "C Scaled", "D Scaled", "E Scaled", "F Scaled", "G Scaled", "H Scaled", "I Scaled", "J Scaled", "K Scaled", "L Scaled", "M Scaled", "N Scaled", "O Scaled", "P Scaled", "Q Scaled", "R Scaled", "S Scaled", "T Scaled", "U Scaled", "V Scaled", "W Scaled", "X Scaled", "Y Scaled", "Z Scaled", "AA Scaled", "AB Scaled", "AC Scaled", "AD Scaled", "AE Scaled", "AF Scaled", "AG Scaled", "AH Scaled", "AI Scaled", "AJ Scaled", "AK Scaled", "AL Scaled", "AM Scaled", "AN Scaled", "AO Scaled", "AP Scaled", "AQ Scaled", "AR Scaled", "AS Scaled", "AT Scaled", "AU Scaled", "AV Scaled", "AW Scaled", "AX Scaled", "AY Scaled", "AZ Scaled", "BA Scaled", "BB Scaled", "BC Scaled", "BD Scaled", "BE Scaled", "BF Scaled", "BG Scaled", "BH Scaled", "BI Scaled", "BJ Scaled", "BK Scaled", "BL Scaled", "BM Scaled", "BN Scaled", "BO Scaled", "BP Scaled", "BQ Scaled", "BR Scaled", "BS Scaled", "BT Scaled", "BU Scaled", "BV Scaled", "BW Scaled", "BX Scaled", "BY Scaled", "BZ Scaled"], "greek_section": ["Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta", "Iota", "Kappa", "Lambda", "Mu", "Nu", "Xi", "Omicron", "Pi", "Rho", "Sigma", "Tau", "Upsilon", "Phi", "Chi", "Psi", "Omega"], "aleph_section": ["Aleph Null (ℵ₀)", "ℵ₀¹⁰", "ℵ₀↑↑10", "ℵ₀¹K", "ℵ₀↑↑1K", "ℵ₀¹M", "ℵ₀↑↑1M", "ℵ₀¹B", "ℵ₀↑↑1B", "ℵ₀¹T", "ℵ₀↑↑1T", "ℵ₀¹Qa", "ℵ₀↑↑Qa", "ℵ₁", "ℵ₁¹⁰", "ℵ₁↑↑10", "ℵ₂", "ℵ₂↑↑10", "ℵω", "ℵω↑↑10", "ℵ_Omega", "ℵ_Absolute"], "infinity_section": ["Infinity (∞)", "∞¹⁰", "∞↑↑10", "∞¹K", "∞↑↑1K", "∞¹M", "∞↑↑1M", "∞¹B", "∞↑↑1B", "∞¹T", "∞↑↑1T", "∞¹Qa", "∞↑↑Qa", "∞²", "∞³", "∞¹⁰⁰", "∞↑↑↑10", "∞_Absolute"], "omega_section": ["omega Null (ω₀)", "ω₀¹⁰", "ω₀↑↑10", "ω₀¹K", "ω₀↑↑1K", "ω₀¹M", "ω₀↑↑1M", "ω₀¹B", "ω₀↑↑1B", "ω₀¹T", "ω₀↑↑1T", "ω₀¹Qa", "ω₀↑↑Qa", "ω₁", "ω₂", "ω_Omega"], "greek_letter_section": ["ε", "ρ", "τ", "υ", "θ", "ο", "π", "α", "σ", "δ", "φ", "η", "ξ", "κ", "λ", "ζ", "χ", "ω", "β", "ν", "μ"], "japanese_section": ["ア", "イ", "ウ", "エ", "オ", "カ", "キ", "ク", "ケ", "コ"], "space_section": ["Void", "Black Hole", "White Hole", "Singularity", "Universal", "Multiversal", "Megaversal", "Omniversal", "Metaversal", "Hyperversal", "Outerverse", "Boundless", "Beyond-Outerverse", "Apeiron", "The Source", "The Primordial Tapestry"], "reality_section": ["Base Reality", "Alternate Reality", "Parallel Reality", "Pocket Reality", "Virtual Reality", "Simulated Reality", "Distorted Reality", "Fractured Reality", "Collapsed Reality", "Infinite Reality", "True Reality", "False Reality", "Absolute Reality", "The Backrooms", "Meta-Reality", "Pataphysical Reality", "Conceptual Reality"], "expansion_tiers_1000_plus": ["Sub-Common", "Micro-Common", "Nano-Common", "Pico-Common", "Femto-Common", "Atto-Common", "Zepto-Common", "Yocto-Common", "Sub-Uncommon", "Micro-Uncommon", "Nano-Uncommon", "Pico-Uncommon", "Femto-Uncommon", "Atto-Uncommon", "Zepto-Uncommon", "Yocto-Uncommon", "Sub-Good", "Micro-Good", "Nano-Good", "Pico-Good", "Sub-Better", "Micro-Better", "Nano-Better", "Pico-Better", "Sub-Rare", "Micro-Rare", "Nano-Rare", "Pico-Rare", "Sub-Legendary", "Micro-Legendary", "Nano-Legendary", "Pico-Legendary", "Sub-Apex", "Micro-Apex", "Nano-Apex", "Pico-Apex", "Sub-Heavenly", "Micro-Heavenly", "Nano-Heavenly", "Pico-Heavenly", "Sub-God", "Micro-God", "Nano-God", "Pico-God", "Trans-God", "Hyper-God", "Outer-God", "Boundless-God", "Omnipotent-God", "Omnicient-God", "Absolute-God", "Primal Foundation", "Elemental Core", "Astral Spark", "Cosmic Weave", "Stellar Matrix", "Galactic Nexus", "Universal Thread", "Multidimensional Fabric", "Infinite Lattice", "Singular Horizon", "Ethereal Blueprint", "Phantasmal Echo", "Spectral Anchor", "Void Catalyst", "Nebular Genesis", "Pulsar Awakening", "Quasar Alignment", "Supercluster Convergence", "Hypercluster Sovereign", "Omnicluster Monarch", "Transcendental Apex", "Absolute Vanguard", "Infinite Zenith", "Omega Horizon", "Alpha Genesis", "Primeval Tapestry", "Subatomic Weaver", "Quantum Architect", "Reality Forger", "Dimension Shaper", "Timeline Sculptor", "Chronos Warden", "Entropy Catalyst", "Aether Sovereign", "Null Emperor", "Void Monarch", "Abyssal Godhead", "Celestial Overlord", "Divine Paradigm", "Infinite Catalyst", "Absolute Zenith", "Everlasting Core", "Boundless Threshold", "Outerversal Anchor", "Hyperversal Nexus", "Metaversal Crucible", "Omniversal Vault", "Megaversal Keystone", "Multiversal Pinnacle", "Universal Catalyst", "Singular Absolute", "Eternal Dawn", "Final Twilight", "Cosmic Zero", "True Infinity", "Ultimate Genesis", "Beyond Conception", "Formless Origin", "Nameless Shroud", "Silent Threshold", "The Unseen Weave", "The Deepest Echo", "The Final Silence", "Eternal Silence"], "elemental_section": ["Fire Spark", "Fire Ember", "Fire Core", "Fire Heart", "Fire Soul", "Fire Crown", "Fire Throne", "Fire Dominion", "Water Spark", "Water Ember", "Water Core", "Water Heart", "Water Soul", "Water Crown", "Water Throne", "Water Dominion", "Earth Spark", "Earth Ember", "Earth Core", "Earth Heart", "Earth Soul", "Earth Crown", "Earth Throne", "Earth Dominion", "Air Spark", "Air Ember", "Air Core", "Air Heart", "Air Soul", "Air Crown", "Air Throne", "Air Dominion", "Lightning Spark", "Lightning Ember", "Lightning Core", "Lightning Heart", "Lightning Soul", "Lightning Crown", "Lightning Throne", "Lightning Dominion", "Ice Spark", "Ice Ember", "Ice Core", "Ice Heart", "Ice Soul", "Ice Crown", "Ice Throne", "Ice Dominion", "Shadow Spark", "Shadow Ember", "Shadow Core", "Shadow Heart", "Shadow Soul", "Shadow Crown", "Shadow Throne", "Shadow Dominion", "Light Spark", "Light Ember", "Light Core", "Light Heart", "Light Soul", "Light Crown", "Light Throne", "Light Dominion", "Nature Spark", "Nature Ember", "Nature Core", "Nature Heart", "Nature Soul", "Nature Crown", "Nature Throne", "Nature Dominion", "Metal Spark", "Metal Ember", "Metal Core", "Metal Heart", "Metal Soul", "Metal Crown", "Metal Throne", "Metal Dominion", "Crystal Spark", "Crystal Ember", "Crystal Core", "Crystal Heart", "Crystal Soul", "Crystal Crown", "Crystal Throne", "Crystal Dominion", "Plasma Spark", "Plasma Ember", "Plasma Core", "Plasma Heart", "Plasma Soul", "Plasma Crown", "Plasma Throne", "Plasma Dominion", "Magma Spark", "Magma Ember", "Magma Core", "Magma Heart", "Magma Soul", "Magma Crown", "Magma Throne", "Magma Dominion", "Storm Spark", "Storm Ember", "Storm Core", "Storm Heart", "Storm Soul", "Storm Crown", "Storm Throne", "Storm Dominion", "Void Spark", "Void Ember", "Void Core", "Void Heart", "Void Soul", "Void Crown", "Void Throne", "Void Dominion", "Spirit Spark", "Spirit Ember", "Spirit Core", "Spirit Heart", "Spirit Soul", "Spirit Crown", "Spirit Throne", "Spirit Dominion", "Time Spark", "Time Ember", "Time Core", "Time Heart", "Time Soul", "Time Crown", "Time Throne", "Time Dominion", "Space Spark", "Space Ember", "Space Core", "Space Heart", "Space Soul", "Space Crown", "Space Throne", "Space Dominion", "Gravity Spark", "Gravity Ember", "Gravity Core", "Gravity Heart", "Gravity Soul", "Gravity Crown", "Gravity Throne", "Gravity Dominion", "Sound Spark", "Sound Ember", "Sound Core", "Sound Heart", "Sound Soul", "Sound Crown", "Sound Throne", "Sound Dominion"], "gem_section": ["Raw Quartz", "Polished Quartz", "Flawless Quartz", "Radiant Quartz", "Prismatic Quartz", "Eternal Quartz", "Raw Amethyst", "Polished Amethyst", "Flawless Amethyst", "Radiant Amethyst", "Prismatic Amethyst", "Eternal Amethyst", "Raw Topaz", "Polished Topaz", "Flawless Topaz", "Radiant Topaz", "Prismatic Topaz", "Eternal Topaz", "Raw Garnet", "Polished Garnet", "Flawless Garnet", "Radiant Garnet", "Prismatic Garnet", "Eternal Garnet", "Raw Sapphire", "Polished Sapphire", "Flawless Sapphire", "Radiant Sapphire", "Prismatic Sapphire", "Eternal Sapphire", "Raw Emerald", "Polished Emerald", "Flawless Emerald", "Radiant Emerald", "Prismatic Emerald", "Eternal Emerald", "Raw Ruby", "Polished Ruby", "Flawless Ruby", "Radiant Ruby", "Prismatic Ruby", "Eternal Ruby", "Raw Diamond", "Polished Diamond", "Flawless Diamond", "Radiant Diamond", "Prismatic Diamond", "Eternal Diamond", "Raw Opal", "Polished Opal", "Flawless Opal", "Radiant Opal", "Prismatic Opal", "Eternal Opal", "Raw Onyx", "Polished Onyx", "Flawless Onyx", "Radiant Onyx", "Prismatic Onyx", "Eternal Onyx", "Raw Jade", "Polished Jade", "Flawless Jade", "Radiant Jade", "Prismatic Jade", "Eternal Jade", "Raw Obsidian", "Polished Obsidian", "Flawless Obsidian", "Radiant Obsidian", "Prismatic Obsidian", "Eternal Obsidian", "Raw Moonstone", "Polished Moonstone", "Flawless Moonstone", "Radiant Moonstone", "Prismatic Moonstone", "Eternal Moonstone", "Raw Sunstone", "Polished Sunstone", "Flawless Sunstone", "Radiant Sunstone", "Prismatic Sunstone", "Eternal Sunstone", "Raw Starstone", "Polished Starstone", "Flawless Starstone", "Radiant Starstone", "Prismatic Starstone", "Eternal Starstone", "Raw Aetherstone", "Polished Aetherstone", "Flawless Aetherstone", "Radiant Aetherstone", "Prismatic Aetherstone", "Eternal Aetherstone"], "creature_section": ["Hatchling Slime", "Adult Slime", "Elder Slime", "Ancient Slime", "Mythic Slime", "Divine Slime", "Hatchling Goblin", "Adult Goblin", "Elder Goblin", "Ancient Goblin", "Mythic Goblin", "Divine Goblin", "Hatchling Wolf", "Adult Wolf", "Elder Wolf", "Ancient Wolf", "Mythic Wolf", "Divine Wolf", "Hatchling Golem", "Adult Golem", "Elder Golem", "Ancient Golem", "Mythic Golem", "Divine Golem", "Hatchling Griffin", "Adult Griffin", "Elder Griffin", "Ancient Griffin", "Mythic Griffin", "Divine Griffin", "Hatchling Wyvern", "Adult Wyvern", "Elder Wyvern", "Ancient Wyvern", "Mythic Wyvern", "Divine Wyvern", "Hatchling Dragon", "Adult Dragon", "Elder Dragon", "Ancient Dragon", "Mythic Dragon", "Divine Dragon", "Hatchling Phoenix", "Adult Phoenix", "Elder Phoenix", "Ancient Phoenix", "Mythic Phoenix", "Divine Phoenix", "Hatchling Hydra", "Adult Hydra", "Elder Hydra", "Ancient Hydra", "Mythic Hydra", "Divine Hydra", "Hatchling Leviathan", "Adult Leviathan", "Elder Leviathan", "Ancient Leviathan", "Mythic Leviathan", "Divine Leviathan", "Hatchling Behemoth", "Adult Behemoth", "Elder Behemoth", "Ancient Behemoth", "Mythic Behemoth", "Divine Behemoth", "Hatchling Titan", "Adult Titan", "Elder Titan", "Ancient Titan", "Mythic Titan", "Divine Titan", "Hatchling Kraken", "Adult Kraken", "Elder Kraken", "Ancient Kraken", "Mythic Kraken", "Divine Kraken", "Hatchling Basilisk", "Adult Basilisk", "Elder Basilisk", "Ancient Basilisk", "Mythic Basilisk", "Divine Basilisk", "Hatchling Chimera", "Adult Chimera", "Elder Chimera", "Ancient Chimera", "Mythic Chimera", "Divine Chimera", "Hatchling Sphinx", "Adult Sphinx", "Elder Sphinx", "Ancient Sphinx", "Mythic Sphinx", "Divine Sphinx"], "constellation_section": ["Andromeda", "Aquarius", "Aquila", "Aries", "Auriga", "Boötes", "Cancer", "Canis Major", "Canis Minor", "Capricornus", "Cassiopeia", "Centaurus", "Cepheus", "Cetus", "Corona Borealis", "Corvus", "Crux", "Cygnus", "Delphinus", "Draco", "Eridanus", "Gemini", "Hercules", "Hydra Constellation", "Leo", "Libra", "Lyra", "Orion", "Pegasus", "Perseus", "Phoenix Constellation", "Pisces", "Sagittarius", "Scorpius", "Taurus", "Ursa Major", "Ursa Minor", "Virgo", "Lupus", "Ophiuchus"], "hebrew_section": ["א (Aleph)", "ב (Bet)", "ג (Gimel)", "ד (Dalet)", "ה (He)", "ו (Vav)", "ז (Zayin)", "ח (Het)", "ט (Tet)", "י (Yod)", "כ (Kaf)", "ל (Lamed)", "מ (Mem)", "נ (Nun)", "ס (Samekh)", "ע (Ayin)", "פ (Pe)", "צ (Tsadi)", "ק (Qof)", "ר (Resh)", "ש (Shin)", "ת (Tav)"], "hiragana_section": ["あ", "い", "う", "え", "お", "か", "き", "く", "け", "こ", "さ", "し", "す", "せ", "そ", "た", "ち", "つ", "て", "と", "な", "に", "ぬ", "ね", "の", "は", "ひ", "ふ", "へ", "ほ", "ま", "み", "む", "め", "も", "や", "ゆ", "よ", "ら", "り", "る", "れ", "ろ", "わ", "を", "ん"], "katakana_continued_section": ["サ", "シ", "ス", "セ", "ソ", "タ", "チ", "ツ", "テ", "ト", "ナ", "ニ", "ヌ", "ネ", "ノ", "ハ", "ヒ", "フ", "ヘ", "ホ", "マ", "ミ", "ム", "メ", "モ", "ヤ", "ユ", "ヨ", "ラ", "リ", "ル", "レ", "ロ", "ワ", "ヲ", "ン"], "rune_section": ["Fehu", "Uruz", "Thurisaz", "Ansuz", "Raido", "Kenaz", "Gebo", "Wunjo", "Hagalaz", "Naudiz", "Isa", "Jera", "Eihwaz", "Perthro", "Algiz", "Sowilo", "Tiwaz", "Berkano", "Ehwaz", "Mannaz", "Laguz", "Ingwaz", "Dagaz", "Othala"], "dimension_section": ["1st Dimension", "2nd Dimension", "3rd Dimension", "4th Dimension", "5th Dimension", "6th Dimension", "7th Dimension", "8th Dimension", "9th Dimension", "10th Dimension", "11th Dimension", "12th Dimension", "13th Dimension", "14th Dimension", "15th Dimension", "16th Dimension", "17th Dimension", "18th Dimension", "19th Dimension", "20th Dimension", "21st Dimension", "22nd Dimension", "23rd Dimension", "24th Dimension", "25th Dimension", "26th Dimension", "27th Dimension", "28th Dimension", "29th Dimension", "30th Dimension", "31st Dimension", "32nd Dimension", "33rd Dimension", "34th Dimension", "35th Dimension", "36th Dimension", "37th Dimension", "38th Dimension", "39th Dimension", "40th Dimension", "41st Dimension", "42nd Dimension", "43rd Dimension", "44th Dimension", "45th Dimension", "46th Dimension", "47th Dimension", "48th Dimension", "49th Dimension", "50th Dimension"], "roman_tier_section": ["Tier I", "Tier II", "Tier III", "Tier IV", "Tier V", "Tier VI", "Tier VII", "Tier VIII", "Tier IX", "Tier X", "Tier XI", "Tier XII", "Tier XIII", "Tier XIV", "Tier XV", "Tier XVI", "Tier XVII", "Tier XVIII", "Tier XIX", "Tier XX", "Tier XXI", "Tier XXII", "Tier XXIII", "Tier XXIV", "Tier XXV", "Tier XXVI", "Tier XXVII", "Tier XXVIII", "Tier XXIX", "Tier XXX", "Tier XXXI", "Tier XXXII", "Tier XXXIII", "Tier XXXIV", "Tier XXXV", "Tier XXXVI", "Tier XXXVII", "Tier XXXVIII", "Tier XXXIX", "Tier XL", "Tier XLI", "Tier XLII", "Tier XLIII", "Tier XLIV", "Tier XLV", "Tier XLVI", "Tier XLVII", "Tier XLVIII", "Tier XLIX", "Tier L", "Tier LI", "Tier LII", "Tier LIII", "Tier LIV", "Tier LV", "Tier LVI", "Tier LVII", "Tier LVIII", "Tier LIX", "Tier LX", "Tier LXI", "Tier LXII", "Tier LXIII", "Tier LXIV", "Tier LXV", "Tier LXVI", "Tier LXVII", "Tier LXVIII", "Tier LXIX", "Tier LXX", "Tier LXXI", "Tier LXXII", "Tier LXXIII", "Tier LXXIV", "Tier LXXV", "Tier LXXVI", "Tier LXXVII", "Tier LXXVIII", "Tier LXXIX", "Tier LXXX", "Tier LXXXI", "Tier LXXXII", "Tier LXXXIII", "Tier LXXXIV", "Tier LXXXV", "Tier LXXXVI", "Tier LXXXVII", "Tier LXXXVIII", "Tier LXXXIX", "Tier XC", "Tier XCI", "Tier XCII", "Tier XCIII", "Tier XCIV", "Tier XCV", "Tier XCVI", "Tier XCVII", "Tier XCVIII", "Tier XCIX", "Tier C"], "metric_rank_section": ["Kilo-Common", "Kilo-Uncommon", "Kilo-Good", "Kilo-Better", "Kilo-Rare", "Kilo-Rarer", "Kilo-Ultra Rare", "Kilo-Legendary", "Kilo-Apex", "Kilo-Heavenly", "Kilo-Advanced", "Kilo-Half god", "Kilo-God", "Mega-Common", "Mega-Uncommon", "Mega-Good", "Mega-Better", "Mega-Rare", "Mega-Rarer", "Mega-Ultra Rare", "Mega-Legendary", "Mega-Apex", "Mega-Heavenly", "Mega-Advanced", "Mega-Half god", "Mega-God", "Giga-Common", "Giga-Uncommon", "Giga-Good", "Giga-Better", "Giga-Rare", "Giga-Rarer", "Giga-Ultra Rare", "Giga-Legendary", "Giga-Apex", "Giga-Heavenly", "Giga-Advanced", "Giga-Half god", "Giga-God", "Tera-Common", "Tera-Uncommon", "Tera-Good", "Tera-Better", "Tera-Rare", "Tera-Rarer", "Tera-Ultra Rare", "Tera-Legendary", "Tera-Apex", "Tera-Heavenly", "Tera-Advanced", "Tera-Half god", "Tera-God", "Peta-Common", "Peta-Uncommon", "Peta-Good", "Peta-Better", "Peta-Rare", "Peta-Rarer", "Peta-Ultra Rare", "Peta-Legendary", "Peta-Apex", "Peta-Heavenly", "Peta-Advanced", "Peta-Half god", "Peta-God", "Exa-Common", "Exa-Uncommon", "Exa-Good", "Exa-Better", "Exa-Rare", "Exa-Rarer", "Exa-Ultra Rare", "Exa-Legendary", "Exa-Apex", "Exa-Heavenly", "Exa-Advanced", "Exa-Half god", "Exa-God", "Zetta-Common", "Zetta-Uncommon", "Zetta-Good", "Zetta-Better", "Zetta-Rare", "Zetta-Rarer", "Zetta-Ultra Rare", "Zetta-Legendary", "Zetta-Apex", "Zetta-Heavenly", "Zetta-Advanced", "Zetta-Half god", "Zetta-God", "Yotta-Common", "Yotta-Uncommon", "Yotta-Good", "Yotta-Better", "Yotta-Rare", "Yotta-Rarer", "Yotta-Ultra Rare", "Yotta-Legendary", "Yotta-Apex", "Yotta-Heavenly", "Yotta-Advanced", "Yotta-Half god", "Yotta-God", "Ronna-Common", "Ronna-Uncommon", "Ronna-Good", "Ronna-Better", "Ronna-Rare", "Ronna-Rarer", "Ronna-Ultra Rare", "Ronna-Legendary", "Ronna-Apex", "Ronna-Heavenly", "Ronna-Advanced", "Ronna-Half god", "Ronna-God", "Quetta-Common", "Quetta-Uncommon", "Quetta-Good", "Quetta-Better", "Quetta-Rare", "Quetta-Rarer", "Quetta-Ultra Rare", "Quetta-Legendary", "Quetta-Apex", "Quetta-Heavenly", "Quetta-Advanced", "Quetta-Half god", "Quetta-God"], "cosmic_structure_section": ["Planet", "Moon", "Star", "Binary Star", "Nebula", "Pulsar", "Quasar", "Magnetar", "Neutron Star", "Red Giant", "White Dwarf", "Supernova", "Hypernova", "Galaxy", "Galaxy Cluster", "Supercluster", "Cosmic Filament", "Cosmic Web", "Great Attractor", "Dark Matter Halo", "Dark Energy Field", "Cosmic Microwave Background", "Big Bang", "Big Crunch", "Big Rip", "Heat Death", "Cosmic Inflation", "Multiverse Foam", "Brane", "Bulk"], "scaled_section_ii": ["CA Scaled", "CB Scaled", "CC Scaled", "CD Scaled", "CE Scaled", "CF Scaled", "CG Scaled", "CH Scaled", "CI Scaled", "CJ Scaled", "CK Scaled", "CL Scaled", "CM Scaled", "CN Scaled", "CO Scaled", "CP Scaled", "CQ Scaled", "CR Scaled", "CS Scaled", "CT Scaled", "CU Scaled", "CV Scaled", "CW Scaled", "CX Scaled", "CY Scaled", "CZ Scaled", "DA Scaled", "DB Scaled", "DC Scaled", "DD Scaled", "DE Scaled", "DF Scaled", "DG Scaled", "DH Scaled", "DI Scaled", "DJ Scaled", "DK Scaled", "DL Scaled", "DM Scaled", "DN Scaled", "DO Scaled", "DP Scaled", "DQ Scaled", "DR Scaled", "DS Scaled", "DT Scaled", "DU Scaled", "DV Scaled", "DW Scaled", "DX Scaled", "DY Scaled", "DZ Scaled", "EA Scaled", "EB Scaled", "EC Scaled", "ED Scaled", "EE Scaled", "EF Scaled", "EG Scaled", "EH Scaled", "EI Scaled", "EJ Scaled", "EK Scaled", "EL Scaled", "EM Scaled", "EN Scaled", "EO Scaled", "EP Scaled", "EQ Scaled", "ER Scaled", "ES Scaled", "ET Scaled", "EU Scaled", "EV Scaled", "EW Scaled", "EX Scaled", "EY Scaled", "EZ Scaled", "FA Scaled", "FB Scaled", "FC Scaled", "FD Scaled", "FE Scaled", "FF Scaled", "FG Scaled", "FH Scaled", "FI Scaled", "FJ Scaled", "FK Scaled", "FL Scaled", "FM Scaled", "FN Scaled", "FO Scaled", "FP Scaled", "FQ Scaled", "FR Scaled", "FS Scaled", "FT Scaled", "FU Scaled", "FV Scaled", "FW Scaled", "FX Scaled", "FY Scaled", "FZ Scaled", "GA Scaled", "GB Scaled", "GC Scaled", "GD Scaled", "GE Scaled", "GF Scaled", "GG Scaled", "GH Scaled", "GI Scaled", "GJ Scaled", "GK Scaled", "GL Scaled", "GM Scaled", "GN Scaled", "GO Scaled", "GP Scaled", "GQ Scaled", "GR Scaled", "GS Scaled", "GT Scaled", "GU Scaled", "GV Scaled", "GW Scaled", "GX Scaled", "GY Scaled", "GZ Scaled", "HA Scaled", "HB Scaled", "HC Scaled", "HD Scaled", "HE Scaled", "HF Scaled", "HG Scaled", "HH Scaled", "HI Scaled", "HJ Scaled", "HK Scaled", "HL Scaled", "HM Scaled", "HN Scaled", "HO Scaled", "HP Scaled", "HQ Scaled", "HR Scaled", "HS Scaled", "HT Scaled", "HU Scaled", "HV Scaled", "HW Scaled", "HX Scaled", "HY Scaled", "HZ Scaled", "IA Scaled", "IB Scaled", "IC Scaled", "ID Scaled", "IE Scaled", "IF Scaled", "IG Scaled", "IH Scaled", "II Scaled", "IJ Scaled", "IK Scaled", "IL Scaled", "IM Scaled", "IN Scaled", "IO Scaled", "IP Scaled", "IQ Scaled", "IR Scaled", "IS Scaled", "IT Scaled", "IU Scaled", "IV Scaled", "IW Scaled", "IX Scaled", "IY Scaled", "IZ Scaled", "JA Scaled", "JB Scaled", "JC Scaled", "JD Scaled", "JE Scaled", "JF Scaled", "JG Scaled", "JH Scaled", "JI Scaled", "JJ Scaled", "JK Scaled", "JL Scaled", "JM Scaled", "JN Scaled", "JO Scaled", "JP Scaled", "JQ Scaled", "JR Scaled", "JS Scaled", "JT Scaled", "JU Scaled", "JV Scaled", "JW Scaled", "JX Scaled", "JY Scaled", "JZ Scaled", "KA Scaled", "KB Scaled", "KC Scaled", "KD Scaled", "KE Scaled", "KF Scaled", "KG Scaled", "KH Scaled", "KI Scaled", "KJ Scaled", "KK Scaled", "KL Scaled", "KM Scaled", "KN Scaled", "KO Scaled", "KP Scaled", "KQ Scaled", "KR Scaled", "KS Scaled", "KT Scaled", "KU Scaled", "KV Scaled", "KW Scaled", "KX Scaled", "KY Scaled", "KZ Scaled", "LA Scaled", "LB Scaled", "LC Scaled", "LD Scaled", "LE Scaled", "LF Scaled", "LG Scaled", "LH Scaled", "LI Scaled", "LJ Scaled", "LK Scaled", "LL Scaled", "LM Scaled", "LN Scaled", "LO Scaled", "LP Scaled", "LQ Scaled", "LR Scaled", "LS Scaled", "LT Scaled", "LU Scaled", "LV Scaled", "LW Scaled", "LX Scaled", "LY Scaled", "LZ Scaled", "MA Scaled", "MB Scaled", "MC Scaled", "MD Scaled", "ME Scaled", "MF Scaled", "MG Scaled", "MH Scaled", "MI Scaled", "MJ Scaled", "MK Scaled", "ML Scaled", "MM Scaled", "MN Scaled", "MO Scaled", "MP Scaled", "MQ Scaled", "MR Scaled", "MS Scaled", "MT Scaled", "MU Scaled", "MV Scaled", "MW Scaled", "MX Scaled", "MY Scaled", "MZ Scaled", "NA Scaled", "NB Scaled", "NC Scaled", "ND Scaled", "NE Scaled", "NF Scaled", "NG Scaled", "NH Scaled", "NI Scaled", "NJ Scaled", "NK Scaled", "NL Scaled", "NM Scaled", "NN Scaled", "NO Scaled", "NP Scaled", "NQ Scaled", "NR Scaled", "NS Scaled", "NT Scaled", "NU Scaled", "NV Scaled", "NW Scaled", "NX Scaled", "NY Scaled", "NZ Scaled", "OA Scaled", "OB Scaled", "OC Scaled", "OD Scaled", "OE Scaled", "OF Scaled", "OG Scaled", "OH Scaled", "OI Scaled", "OJ Scaled", "OK Scaled", "OL Scaled", "OM Scaled", "ON Scaled", "OO Scaled", "OP Scaled", "OQ Scaled", "OR Scaled", "OS Scaled", "OT Scaled", "OU Scaled", "OV Scaled", "OW Scaled", "OX Scaled", "OY Scaled", "OZ Scaled", "PA Scaled", "PB Scaled", "PC Scaled", "PD Scaled", "PE Scaled", "PF Scaled", "PG Scaled", "PH Scaled", "PI Scaled", "PJ Scaled", "PK Scaled", "PL Scaled", "PM Scaled", "PN Scaled", "PO Scaled", "PP Scaled", "PQ Scaled", "PR Scaled", "PS Scaled", "PT Scaled", "PU Scaled", "PV Scaled", "PW Scaled", "PX Scaled", "PY Scaled", "PZ Scaled", "QA Scaled", "QB Scaled", "QC Scaled", "QD Scaled", "QE Scaled", "QF Scaled", "QG Scaled", "QH Scaled", "QI Scaled", "QJ Scaled", "QK Scaled", "QL Scaled", "QM Scaled", "QN Scaled", "QO Scaled", "QP Scaled", "QQ Scaled", "QR Scaled", "QS Scaled", "QT Scaled", "QU Scaled", "QV Scaled", "QW Scaled", "QX Scaled", "QY Scaled", "QZ Scaled", "RA Scaled", "RB Scaled", "RC Scaled", "RD Scaled", "RE Scaled", "RF Scaled", "RG Scaled", "RH Scaled", "RI Scaled", "RJ Scaled", "RK Scaled", "RL Scaled", "RM Scaled", "RN Scaled", "RO Scaled", "RP Scaled", "RQ Scaled", "RR Scaled", "RS Scaled", "RT Scaled", "RU Scaled", "RV Scaled", "RW Scaled", "RX Scaled", "RY Scaled", "RZ Scaled", "SA Scaled", "SB Scaled", "SC Scaled", "SD Scaled", "SE Scaled", "SF Scaled", "SG Scaled", "SH Scaled", "SI Scaled", "SJ Scaled", "SK Scaled", "SL Scaled", "SM Scaled", "SN Scaled", "SO Scaled", "SP Scaled", "SQ Scaled", "SR Scaled", "SS Scaled", "ST Scaled", "SU Scaled", "SV Scaled", "SW Scaled", "SX Scaled", "SY Scaled", "SZ Scaled", "TA Scaled", "TB Scaled", "TC Scaled", "TD Scaled", "TE Scaled", "TF Scaled", "TG Scaled", "TH Scaled", "TI Scaled", "TJ Scaled", "TK Scaled", "TL Scaled", "TM Scaled", "TN Scaled", "TO Scaled", "TP Scaled", "TQ Scaled", "TR Scaled", "TS Scaled", "TT Scaled", "TU Scaled", "TV Scaled", "TW Scaled", "TX Scaled", "TY Scaled", "TZ Scaled", "UA Scaled", "UB Scaled", "UC Scaled", "UD Scaled", "UE Scaled", "UF Scaled", "UG Scaled", "UH Scaled", "UI Scaled", "UJ Scaled", "UK Scaled", "UL Scaled", "UM Scaled", "UN Scaled", "UO Scaled", "UP Scaled", "UQ Scaled", "UR Scaled", "US Scaled", "UT Scaled", "UU Scaled", "UV Scaled", "UW Scaled", "UX Scaled", "UY Scaled", "UZ Scaled", "VA Scaled", "VB Scaled", "VC Scaled", "VD Scaled", "VE Scaled", "VF Scaled", "VG Scaled", "VH Scaled", "VI Scaled", "VJ Scaled", "VK Scaled", "VL Scaled", "VM Scaled", "VN Scaled", "VO Scaled", "VP Scaled", "VQ Scaled", "VR Scaled", "VS Scaled", "VT Scaled", "VU Scaled", "VV Scaled", "VW Scaled", "VX Scaled", "VY Scaled", "VZ Scaled", "WA Scaled", "WB Scaled", "WC Scaled", "WD Scaled", "WE Scaled", "WF Scaled", "WG Scaled", "WH Scaled", "WI Scaled", "WJ Scaled", "WK Scaled", "WL Scaled", "WM Scaled", "WN Scaled", "WO Scaled", "WP Scaled", "WQ Scaled", "WR Scaled", "WS Scaled", "WT Scaled", "WU Scaled", "WV Scaled", "WW Scaled", "WX Scaled", "WY Scaled", "WZ Scaled", "XA Scaled", "XB Scaled", "XC Scaled", "XD Scaled", "XE Scaled", "XF Scaled", "XG Scaled", "XH Scaled", "XI Scaled", "XJ Scaled", "XK Scaled", "XL Scaled", "XM Scaled", "XN Scaled", "XO Scaled", "XP Scaled", "XQ Scaled", "XR Scaled", "XS Scaled", "XT Scaled", "XU Scaled", "XV Scaled", "XW Scaled", "XX Scaled", "XY Scaled", "XZ Scaled", "YA Scaled", "YB Scaled", "YC Scaled", "YD Scaled", "YE Scaled", "YF Scaled", "YG Scaled", "YH Scaled", "YI Scaled", "YJ Scaled", "YK Scaled", "YL Scaled", "YM Scaled", "YN Scaled", "YO Scaled", "YP Scaled", "YQ Scaled", "YR Scaled", "YS Scaled", "YT Scaled", "YU Scaled", "YV Scaled", "YW Scaled", "YX Scaled", "YY Scaled", "YZ Scaled", "ZA Scaled", "ZB Scaled", "ZC Scaled", "ZD Scaled", "ZE Scaled", "ZF Scaled", "ZG Scaled", "ZH Scaled", "ZI Scaled", "ZJ Scaled", "ZK Scaled", "ZL Scaled", "ZM Scaled", "ZN Scaled", "ZO Scaled", "ZP Scaled", "ZQ Scaled", "ZR Scaled", "ZS Scaled", "ZT Scaled", "ZU Scaled", "ZV Scaled", "ZW Scaled", "ZX Scaled", "ZY Scaled", "ZZ Scaled"], "secret_section": ["Ethereal Veil", "Shadow Nexus", "Oblivion Core", "The Backrooms: Level ∞", "Singularity Beyond", "Quantum Paradox", "Forgotten Realm", "The Event Horizon", "Null Dimension", "Transcendence Point", "Absolute Omega (ω∞)", "Reality Collapse", "The End of All Things", "The Genesis Point", "The Alpha Archive", "The Omega Vault", "Universal Ending Point of All"], "secret_section_ii": ["The Hidden Archive", "Whispering Void", "Lost Frequency", "The Unwritten Page", "Echo of Nothing", "Mirror Beyond Mirrors", "The Last Variable", "Paradox Engine", "The Silent Equation", "Sealed Eternity", "Zero Point Throne", "The Nameless Door", "Fragment of Everything", "The Unlit Star", "Hollow Infinity", "The Forbidden Constant", "Abyss of Origins", "The Second Genesis", "Phantom Omega", "The Unreachable Shore", "Crown of Entropy", "The Final Variable", "Ghost of the Source", "Eclipse of Reality", "The Forgotten Zenith", "Veil Beyond the Veil", "The Last Tapestry", "Cradle of Endings", "The Infinite Footnote", "The True Final Tier", "Forbidden Archive", "Forbidden Vault", "Forbidden Gate", "Forbidden Throne", "Forbidden Core", "Forbidden Echo", "Forbidden Crown", "Forbidden Veil", "Forbidden Horizon", "Forbidden Cipher", "Forbidden Engine", "Forbidden Oracle", "Forbidden Relic", "Forbidden Sigil", "Forbidden Threshold", "Forbidden Library", "Forbidden Shard", "Forbidden Monolith", "Forbidden Genesis", "Sealed Archive", "Sealed Vault", "Sealed Gate", "Sealed Throne", "Sealed Core", "Sealed Echo", "Sealed Crown", "Sealed Veil", "Sealed Horizon", "Sealed Cipher", "Sealed Engine", "Sealed Oracle", "Sealed Relic", "Sealed Sigil", "Sealed Threshold", "Sealed Library", "Sealed Shard", "Sealed Monolith", "Sealed Genesis", "Forgotten Archive", "Forgotten Vault", "Forgotten Gate", "Forgotten Throne", "Forgotten Core", "Forgotten Echo", "Forgotten Crown", "Forgotten Veil", "Forgotten Horizon", "Forgotten Cipher", "Forgotten Engine", "Forgotten Oracle", "Forgotten Relic", "Forgotten Sigil", "Forgotten Threshold", "Forgotten Library", "Forgotten Shard", "Forgotten Monolith", "Forgotten Genesis", "Hollow Archive", "Hollow Vault", "Hollow Gate", "Hollow Throne", "Hollow Core", "Hollow Echo", "Hollow Crown", "Hollow Veil", "Hollow Horizon", "Hollow Cipher", "Hollow Engine", "Hollow Oracle", "Hollow Relic", "Hollow Sigil", "Hollow Threshold", "Hollow Library", "Hollow Shard", "Hollow Monolith", "Hollow Genesis", "Phantom Archive", "Phantom Vault", "Phantom Gate", "Phantom Throne", "Phantom Core", "Phantom Echo", "Phantom Crown", "Phantom Veil", "Phantom Horizon", "Phantom Cipher", "Phantom Engine", "Phantom Oracle", "Phantom Relic", "Phantom Sigil", "Phantom Threshold", "Phantom Library", "Phantom Shard", "Phantom Monolith", "Phantom Genesis"], "last_section": ["You"]};
+
+// initTiers() in gen.js rebuilds these to add the generated tiers, so they are reassigned there
+let TIER_KEYS = Object.keys(DATA).filter(k => Array.isArray(DATA[k]) && DATA[k].length > 0);
+let TIER_INDEX = Object.fromEntries(TIER_KEYS.map((k, i) => [k, i]));
+let CUT_START = TIER_INDEX.greek_section;   // cutscenes begin at the Greek section
+let CUT_END = TIER_KEYS.length - 1;
+let TIER_CUM = null;                        // running total of tier odds, set in initTiers()
+const NAMES = {};                           // display titles for generated tiers
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const pick = (arr, i) => arr[((i % arr.length) + arr.length) % arr.length];
+const wrap = (v, m) => ((v % m) + m) % m;
+
+function prettyName(key) {
+  if (NAMES[key]) return NAMES[key];
+  return key.split('_').map(w => (w === 'ii' ? 'II' : w[0].toUpperCase() + w.slice(1))).join(' ');
+}
+function ordinal(n) {
+  const v = n % 100;
+  if (v >= 11 && v <= 13) return n + 'th';
+  return n + ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th');
+}
+// best roll = furthest tier, then furthest item
+function rankOf(pair) { return TIER_INDEX[pair[0]] * 1e6 + pair[1]; }
+
+// ---------- per-tier text effect and colour: [effect, colour] ----------
+const STYLE = {
+  rarity_ranks: ['neon', '#b0bec5'],
+  scaled_section: ['shimmer', '#ffd54f'],
+  greek_section: ['gold', '#ffb300'],
+  aleph_section: ['chroma', '#00e5ff'],
+  infinity_section: ['rainbow', '#ffffff'],
+  omega_section: ['void', '#b388ff'],
+  greek_letter_section: ['wave', '#80deea'],
+  japanese_section: ['flicker', '#ff5252'],
+  space_section: ['hologram', '#40c4ff'],
+  reality_section: ['glitch', '#ff4081'],
+  expansion_tiers_1000_plus: ['ember', '#ff9100'],
+  elemental_section: ['aurora', '#69f0ae'],
+  gem_section: ['frost', '#e0f7fa'],
+  creature_section: ['pulse', '#76ff03'],
+  constellation_section: ['neon', '#fff59d'],
+  hebrew_section: ['shimmer', '#ffe0b2'],
+  hiragana_section: ['wave', '#f8bbd0'],
+  katakana_continued_section: ['flicker', '#00e676'],
+  rune_section: ['pulse', '#ff6e40'],
+  dimension_section: ['warp', '#7c4dff'],
+  roman_tier_section: ['gold', '#fff8e1'],
+  metric_rank_section: ['glitch', '#00b0ff'],
+  cosmic_structure_section: ['aurora', '#ffd740'],
+  scaled_section_ii: ['chroma', '#00ffb3'],
+  secret_section: ['void', '#ff1744'],
+  secret_section_ii: ['hologram', '#ea80fc'],
+  last_section: ['rainbow', '#ffffff'],
+};
+
+// Writes text into el with its tier's effect. Replaces only fx classes, so layout classes survive.
+function fxText(el, text, key) {
+  const [fx, color] = STYLE[key] || ['neon', '#ffffff'];
+  for (const c of [...el.classList]) if (c === 'fx' || c.startsWith('fx-')) el.classList.remove(c);
+  el.classList.add('fx', 'fx-' + fx);
+  el.style.setProperty('--c', color);
+  el.dataset.text = text;
+  el.textContent = '';
+  if (fx === 'wave') {
+    [...text].forEach((ch, i) => {
+      const s = document.createElement('span');
+      s.className = 'ch';
+      s.style.setProperty('--i', i);
+      s.textContent = ch === ' ' ? ' ' : ch;
+      el.appendChild(s);
+    });
+  } else {
+    el.textContent = text;
+  }
+}
+
+// ---------- saved progress (per browser; every access is guarded) ----------
+const SAVE_KEY = 'luckless-v1';
+let state = { found: {}, best: null, recent: null, rolls: 0, ach: {} };
+// generated tiers (g0000 to g0469) are rebuilt on every visit; progress saved for them by an older build is dropped
+const isGenKey = k => /^g\d{4}$/.test(k);
+function validPair(p) {
+  return Array.isArray(p) && Array.isArray(DATA[p[0]]) && !isGenKey(p[0]) && DATA[p[0]][p[1]] !== undefined ? p : null;
+}
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+    if (s && typeof s === 'object') {
+      state.found = {};
+      if (s.found && typeof s.found === 'object') {
+        for (const k of Object.keys(s.found)) if (Array.isArray(DATA[k]) && !isGenKey(k)) state.found[k] = s.found[k];
+      }
+      state.best = validPair(s.best);
+      state.recent = validPair(s.recent);
+      state.rolls = Number.isFinite(s.rolls) ? s.rolls : 0;
+      state.ach = s.ach && typeof s.ach === 'object' ? s.ach : {};
+    }
+  } catch (e) { /* storage blocked or corrupt: start fresh */ }
+}
+function save() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+}
+
+// ---------- star background (floats, and drifts with the mouse) ----------
+const root = document.documentElement;
+const bgC = document.getElementById('stars');
+const bgG = bgC.getContext('2d');
+let W = innerWidth, H = innerHeight, DPR = 1;
+let stars = [];
+let camX = 0, camY = 0, tgtX = 0, tgtY = 0;
+let lastFrame = performance.now();
+
+function sizeAll() {
+  W = innerWidth; H = innerHeight;
+  DPR = Math.min(devicePixelRatio || 1, 2);
+  for (const c of [bgC, fxC]) {
+    c.width = Math.round(W * DPR); c.height = Math.round(H * DPR);
+    c.style.width = W + 'px'; c.style.height = H + 'px';
+  }
+  const n = Math.min(420, Math.round((W * H) / 3800));
+  stars = Array.from({ length: n }, () => ({
+    x: Math.random() * W, y: Math.random() * H,
+    z: 0.15 + Math.random() * 0.85, r: 0.4 + Math.random() * 1.4,
+    tw: Math.random() * 6.28, sp: 0.6 + Math.random() * 2.2,
+  }));
+}
+
+addEventListener('pointermove', e => {
+  tgtX = (e.clientX / W - 0.5) * 2;
+  tgtY = (e.clientY / H - 0.5) * 2;
+});
+
+function starLoop(now) {
+  const dt = Math.min(0.05, (now - lastFrame) / 1000);
+  lastFrame = now;
+  camX += (tgtX - camX) * 0.06;
+  camY += (tgtY - camY) * 0.06;
+  root.style.setProperty('--px', camX.toFixed(4));
+  root.style.setProperty('--py', camY.toFixed(4));
+
+  bgG.setTransform(DPR, 0, 0, DPR, 0, 0);
+  bgG.clearRect(0, 0, W, H);
+  bgG.fillStyle = '#e8ecff';
+  for (const s of stars) {
+    s.y = wrap(s.y - (6 + 16 * s.z) * dt, H);        // slow float upward
+    s.tw += dt * s.sp;
+    const x = wrap(s.x - camX * s.z * 70, W);        // nearer stars move further with the mouse
+    const y = wrap(s.y - camY * s.z * 70, H);
+    bgG.globalAlpha = (0.35 + 0.65 * Math.abs(Math.sin(s.tw))) * (0.35 + 0.65 * s.z);
+    bgG.beginPath();
+    bgG.arc(x, y, s.r * (0.6 + s.z), 0, Math.PI * 2);
+    bgG.fill();
+  }
+  bgG.globalAlpha = 1;
+  requestAnimationFrame(starLoop);
+}
+
+// ---------- cutscene engine: fade to black, build-up, reveal, 4 s hold, fade out, come back ----------
+const fxC = document.getElementById('fx');
+const fxG = fxC.getContext('2d');
+const cutEl = document.getElementById('cut');
+const cutInner = document.getElementById('cutInner');
+const cutTitle = document.getElementById('cutTitle');
+const cutBig = document.getElementById('cutBig');
+const cutBigWrap = document.getElementById('cutBigWrap');
+const slotsEl = document.getElementById('slots');
+const GLYPH_LATIN = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const FADE = 0.6;        // seconds per fade
+const HOLD = 4;          // seconds the rolled item stays on screen
+const MIN_BUILD = 2;     // the first cutscene builds for 2 s
+const MAX_BUILD = 20;    // "You" builds for 20 s
+const BEAT_RATE = 1.2;   // heartbeat pulses per second of warped build time
+
+// [motif, colours, glyphs]. 'none' means the tier has no cutscene. Named tiers are added in named.js.
+const CUT = {
+  rarity_ranks: ['none', ['#b0bec5', '#ffffff', '#90a4ae'], ''],
+  scaled_section: ['none', ['#ffd54f', '#ffecb3', '#ffa000'], ''],
+  greek_section: ['spiral', ['#ffd54f', '#4fc3f7', '#ffffff'], 'αβγδεζηθικλμνξοπρστυφχψω'],
+  aleph_section: ['lemniscate', ['#00e5ff', '#ff4081', '#ffffff'], 'ℵ'],
+  infinity_section: ['lemniscate', ['#ffffff', '#7c4dff', '#00e5ff'], '∞'],
+  omega_section: ['omega', ['#b388ff', '#651fff', '#ffffff'], 'Ω'],
+  greek_letter_section: ['glyphring', ['#80deea', '#26c6da', '#ffffff'], 'εργυοπαθικλνμξ'],
+  japanese_section: ['sunrise', ['#ff5252', '#ffffff', '#ffcdd2'], 'アイウエオカキクケコ'],
+  space_section: ['warp', ['#40c4ff', '#ffffff', '#3949ab'], ''],
+  reality_section: ['planes', ['#ff4081', '#00e5ff', '#ffffff'], ''],
+  expansion_tiers_1000_plus: ['zoom', ['#ffd740', '#ffffff', '#ff9100'], 'µnpfa'],
+  elemental_section: ['orbs', ['#ff6d00', '#00b0ff', '#76ff03', '#e040fb'], 'FWEA'],
+  gem_section: ['facets', ['#f48fb1', '#80deea', '#ffffff'], ''],
+  creature_section: ['claws', ['#76ff03', '#33691e', '#ffffff'], ''],
+  constellation_section: ['constellation', ['#fff59d', '#ffffff', '#82b1ff'], '✦✧⋆★'],
+  hebrew_section: ['glyphring', ['#ffe0b2', '#ffab40', '#ffffff'], 'אבגדהוזחטיכלמנסעפצקרשת'],
+  hiragana_section: ['ink', ['#f8bbd0', '#ffffff', '#f48fb1'], ''],
+  katakana_continued_section: ['datarain', ['#00e676', '#b2ff59', '#ffffff'], 'サシスセソタチツテトナニヌネノ'],
+  rune_section: ['glyphring', ['#ff6e40', '#ffab40', '#fff3e0'], 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃ'],
+  dimension_section: ['cube', ['#7c4dff', '#00e5ff', '#ffffff'], ''],
+  roman_tier_section: ['arch', ['#fff8e1', '#ffd54f', '#ffffff'], 'IVXLCDM'],
+  metric_rank_section: ['bars', ['#00b0ff', '#ffffff', '#84ffff'], 'kMGTPEZYRQ'],
+  cosmic_structure_section: ['galaxy', ['#ffd740', '#ffffff', '#ff6e40'], ''],
+  scaled_section_ii: ['letters', ['#00ffb3', '#00e5ff', '#ffffff'], ''],
+  secret_section: ['veil', ['#ff1744', '#4a0072', '#ffffff'], ''],
+  secret_section_ii: ['cracks', ['#ea80fc', '#ff1744', '#ffffff'], ''],
+  last_section: ['finale', ['#ff004c', '#ffb300', '#fff176', '#00e676', '#00b0ff', '#7c4dff'], ''],
+};
+
+let cut = null;
+
+// 0 at the Greek section, 1 at "You". Logarithmic: the early tiers climb fast, the late ones barely move.
+const logT = ti => Math.log(1 + Math.max(0, ti - CUT_START)) / Math.log(1 + CUT_END - CUT_START);
+const cutIntensity = ti => 0.1 + 0.9 * Math.sqrt(logT(ti));
+const buildSeconds = ti => MIN_BUILD + (MAX_BUILD - MIN_BUILD) * logT(ti);
+
+// Build-up clock: the motion starts at 0.35x speed and winds up to 2.3x by the reveal (slow to fast).
+const warp = t => 0.35 * t + 0.65 * t * t * t;
+
+function makeParts(n) {
+  return Array.from({ length: n }, (_, i) => ({
+    a: Math.random() * Math.PI * 2,
+    r: 0.25 + Math.random() * 0.9,
+    sp: (0.5 + Math.random() * 1.8) * (Math.random() < 0.5 ? -1 : 1),
+    out: 0.6 + Math.random() * 0.9,
+    c: i,
+    s: 1 + Math.random() * 2,
+  }));
+}
+
+// ti: tier index. ii: item index, or -1 to preview the tier itself (from a click in the branch).
+// Tiers with no cutscene finish at once.
+function startCut(ti, ii, done) {
+  const key = TIER_KEYS[ti];
+  const [mode, colors, glyphs] = CUT[key];
+  if (mode === 'none') { done(); return; }
+  const preview = ii < 0;
+  const item = preview ? prettyName(key) : DATA[key][ii];
+  const I = cutIntensity(ti);
+  const D = buildSeconds(ti);
+  const code = mode === 'letters' && !preview ? item.split(' ')[0] : '';
+  cut = {
+    key, item, I, D, mode, colors, done, ii, preview,
+    t0: performance.now(),
+    buildEnd: FADE + D,
+    holdEnd: FADE + D + HOLD,
+    outEnd: FADE + D + HOLD + FADE,
+    backEnd: FADE + D + HOLD + 2 * FADE,
+    glyphArr: [...(mode === 'letters' ? GLYPH_LATIN : glyphs)],
+    parts: ['spiral', 'pulse', 'finale'].includes(mode) ? makeParts(mode === 'finale' ? 300 : Math.round(40 + 420 * I)) : [],
+    dimN: parseInt(item, 10) || 1,
+    target: code, slotEls: [],
+    slotStops: [...code].map((_, i, a) => D * (0.3 + 0.6 * (i + 1) / (a.length + 1))),
+    lastD: 0, kick: 0, revealed: false, shockAt: -1, lastBeat: -1, Ib: I,
+  };
+  cutEl.hidden = false;
+  cutEl.style.opacity = '0';
+  fxText(cutTitle, prettyName(key), key);
+  cutBig.textContent = '';
+  cutBigWrap.hidden = mode !== 'cube';
+  if (mode === 'letters' && !preview) setupSlots(key, item);
+  else slotsEl.hidden = true;
+  fxG.setTransform(1, 0, 0, 1, 0, 0);
+  fxG.clearRect(0, 0, fxC.width, fxC.height);
+  requestAnimationFrame(cutFrame);
+}
+
+function setupSlots(key, item) {
+  const [code, ...rest] = item.split(' ');
+  slotsEl.textContent = '';
+  cut.slotEls = [...code].map(() => {
+    const s = document.createElement('span');
+    s.className = 'slot';
+    slotsEl.appendChild(s);
+    return s;
+  });
+  const tail = document.createElement('span');
+  slotsEl.appendChild(tail);
+  fxText(tail, ' ' + rest.join(' '), key);
+  tail.style.whiteSpace = 'pre';
+  slotsEl.hidden = false;
+}
+
+// Click or Esc: finish the build-up, then the hold, then the fade.
+function skipCut() {
+  if (!cut) return;
+  const e = (performance.now() - cut.t0) / 1000;
+  const target = e < cut.buildEnd ? cut.buildEnd : e < cut.holdEnd ? cut.holdEnd : cut.backEnd;
+  if (target > e) cut.t0 -= (target - e) * 1000;
+}
+
+function cutFrame(now) {
+  if (!cut) return;
+  const e = Math.max(0, (now - cut.t0) / 1000);
+  if (e >= cut.backEnd) { finishCut(); return; }
+  paint(e);
+  requestAnimationFrame(cutFrame);
+}
+
+function finishCut() {
+  const done = cut.done;
+  cut = null;
+  cutEl.hidden = true;
+  cutEl.style.opacity = '';
+  cutInner.style.opacity = '';
+  fxC.style.opacity = '';
+  fxG.setTransform(1, 0, 0, 1, 0, 0);
+  fxG.clearRect(0, 0, fxC.width, fxC.height);
+  done();
+}
+
+function flash(a) {
+  fxG.globalAlpha = a;
+  fxG.fillStyle = '#ffffff';
+  fxG.fillRect(-40, -40, W + 80, H + 80);
+  fxG.globalAlpha = 1;
+}
+
+function tearBars(I, colors) {
+  const n = 1 + Math.floor(I * 4);
+  for (let i = 0; i < n; i++) {
+    fxG.globalAlpha = 0.25 + Math.random() * 0.3;
+    fxG.fillStyle = pick(colors, Math.floor(Math.random() * 9));
+    fxG.fillRect(-40 + Math.random() * 40, Math.random() * H, W + 80, 2 + Math.random() * (6 + 26 * I));
+  }
+  fxG.globalAlpha = 1;
+}
+
+// ---------- cutscene painting: the heartbeat, the scene and the reveal ----------
+
+// The rolled item lands on the black stage. Scaled II already shows its letters in place.
+// A tier preview (from a click in the branch) lands the tier's symbol instead of an item.
+function reveal(e) {
+  cut.revealed = true;
+  cut.kick = 1;
+  cut.shockAt = e;
+  if (cut.preview) { cutBigWrap.hidden = false; fxText(cutBig, symbolFor(cut.key), cut.key); }
+  else if (cut.mode !== 'letters') { cutBigWrap.hidden = false; fxText(cutBig, cut.item, cut.key); }
+  flash(0.25);
+}
+
+// A ring that bursts out from the centre when the item lands
+function drawShock(e) {
+  if (cut.shockAt < 0) return;
+  const s = (e - cut.shockAt) / 1.1;
+  if (s < 0 || s > 1) return;
+  const g = fxG, R = Math.hypot(W, H) * 0.55, grow = 1 - Math.pow(1 - s, 3);
+  g.globalAlpha = 0.9 * (1 - s);
+  g.strokeStyle = cut.colors[0]; g.shadowColor = cut.colors[0]; g.shadowBlur = 24;
+  g.lineWidth = 2 + 14 * (1 - s);
+  g.beginPath(); g.arc(W / 2, H / 2, R * grow, 0, Math.PI * 2); g.stroke();
+  g.shadowBlur = 0; g.globalAlpha = 1;
+}
+
+// The charge: a glowing core that grows as the build-up climbs, with motes spinning round it
+function drawCore(t, tau, beat, I) {
+  const g = fxG, cx = W / 2, cy = H / 2;
+  const R = Math.min(W, H) * (0.03 + 0.2 * Math.pow(tau, 1.5)) * (1 + 0.15 * beat);
+  const glow = g.createRadialGradient(cx, cy, 0, cx, cy, R * 1.8);
+  glow.addColorStop(0, '#ffffff');
+  glow.addColorStop(0.3, cut.colors[0]);
+  glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  g.globalAlpha = 0.1 + 0.4 * tau;
+  g.fillStyle = glow;
+  g.beginPath(); g.arc(cx, cy, R * 1.8, 0, Math.PI * 2); g.fill();
+  const n = 6 + Math.round(18 * tau);
+  g.fillStyle = '#ffffff';
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + t * (1 + 2 * I);
+    const r = R * (1.4 + 0.5 * Math.sin(t * 1.3 + i));
+    g.globalAlpha = 0.3 + 0.6 * tau;
+    g.beginPath(); g.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 1.5 + 2 * tau, 0, Math.PI * 2); g.fill();
+  }
+  g.globalAlpha = 1;
+}
+
+// One frame of a cutscene. e = seconds since the fade began.
+function paint(e) {
+  const c = cut;
+  const eb = Math.max(0, e - FADE);                   // seconds since the build-up began
+  const tau = Math.min(1, eb / c.D);                  // build progress, 0..1
+  const build = e < c.buildEnd;
+  const pv = Math.pow(tau, 1.5);                      // scenes grow on a curve that starts gently
+  // motion clock: warped while building, then it slows down after the reveal
+  const T = build ? c.D * warp(tau) : c.D + (eb - c.D) * 0.8;
+  // the scene thickens as the charge builds, then calms while the roll is held
+  const I = build ? c.I * (0.3 + 0.7 * pv) : c.I * 0.35;
+  c.Ib = I;                                           // the scene helpers read this, not c.I
+  const calm = REDUCED ? 0.2 : 1;
+  // overlay: fade in to black, stay black, then come back to the main screen
+  const overlay = e < FADE ? e / FADE : e < c.outEnd ? 1 : Math.max(0, 1 - (e - c.outEnd) / FADE);
+  const content = e < c.holdEnd ? 1 : e < c.outEnd ? 1 - (e - c.holdEnd) / FADE : 0;
+  cutEl.style.opacity = String(overlay);
+  cutInner.style.opacity = String(content);
+  fxC.style.opacity = String(content);
+  if (content <= 0) return;
+  if (!c.revealed && !build) reveal(e);
+
+  // heartbeat: counted in warped time, so the pulses speed up with the build
+  c.kick *= 0.9;
+  const beatPhase = T * BEAT_RATE;
+  const beatN = Math.floor(beatPhase);
+  if (build && beatN !== c.lastBeat) { c.lastBeat = beatN; c.kick = Math.max(c.kick, 0.3 + 0.5 * tau); }
+  const beat = build ? Math.pow(1 - (beatPhase % 1), 3) : 0;   // jumps on each beat, then fades
+
+  // shake: small at first, then harder as the charge builds, with a kick on every beat
+  const amp = calm * ((2 + 26 * I) + c.kick * 12) * (build ? 1 : 0.4);
+  fxG.setTransform(1, 0, 0, 1, 0, 0);                 // fade last frame a little, so motion leaves trails
+  fxG.globalCompositeOperation = 'destination-out';
+  fxG.fillStyle = `rgba(0, 0, 0, ${0.3 - 0.15 * I})`;
+  fxG.fillRect(0, 0, fxC.width, fxC.height);
+  fxG.globalCompositeOperation = 'source-over';
+  fxG.setTransform(DPR, 0, 0, DPR, (Math.random() - 0.5) * amp * DPR, (Math.random() - 0.5) * amp * DPR);
+  fxG.globalAlpha = 1;
+  // rare soft flicker and tears; never a strobe
+  if (!REDUCED && build && Math.random() < 0.004 + 0.01 * I) flash(0.05 + 0.1 * I);
+  if (build && I > 0.45 && Math.random() < I * 0.08) tearBars(I, c.colors);
+
+  // the scene itself
+  const col = c.colors;
+  if (MOTIFS[c.mode]) MOTIFS[c.mode](T, pv, I, col);
+  else if (c.mode === 'cube') drawCube(T, pv);
+  else if (c.mode === 'letters') drawLetters(T, eb);
+  else if (c.mode === 'finale') drawFinale(T, pv);
+  else if (c.mode === 'spiral') mSpiral(T, pv, I, col, c.glyphArr.length > 0);
+  else if (c.mode === 'rings') mRings(T, pv, I, col);
+  else if (c.mode === 'grid') mGrid(T, I, col);
+  else if (c.mode === 'glyphs') mGlyphs(T, I, col);
+  else if (c.mode === 'shards') mShards(T, I, col);
+  else if (c.mode === 'lightning') mLightning(pv, I, col);
+  else if (c.mode === 'pulse') mPulse(T, pv, I, col);
+  if (build) drawCore(T, tau, beat, I);
+  drawShock(e);
+}
+
+// ---------- generic modes ----------
+function mSpiral(e, p, I, colors, withGlyphs) {
+  const g = fxG, R = Math.min(W, H) * 0.5;
+  const build = Math.min(1, p / 0.4);
+  const burst = p < 0.4 ? 0 : Math.min(1, (p - 0.4) / 0.35);
+  const inner = 1 - 0.88 * build;                       // collapses inward while charging
+  g.font = `${14 + 12 * I}px system-ui, sans-serif`;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (const q of cut.parts) {
+    const ang = q.a + e * q.sp * (1 + 2 * I);
+    const r = R * (q.r * inner + burst * q.out * (1 + I)); // then bursts outward
+    const x = W / 2 + Math.cos(ang) * r, y = H / 2 + Math.sin(ang) * r;
+    g.fillStyle = pick(colors, q.c);
+    if (withGlyphs) g.fillText(pick(cut.glyphArr, q.c), x, y);
+    else { g.beginPath(); g.arc(x, y, q.s * (1 + 1.5 * I), 0, Math.PI * 2); g.fill(); }
+  }
+}
+
+function mRings(e, p, I, colors) {
+  const g = fxG, R = Math.hypot(W, H) * 0.5;
+  const count = 4 + Math.round(10 * I);
+  const grow = p < 0.4 ? 0.4 + 0.6 * (p / 0.4) : 1;
+  g.lineWidth = 1.5 + 4 * I;
+  for (let i = 0; i < count; i++) {
+    const ph = (e * (0.7 + 0.8 * I) + i / count) % 1;
+    g.globalAlpha = (1 - ph) * 0.9;
+    g.strokeStyle = pick(colors, i);
+    g.beginPath();
+    g.arc(W / 2, H / 2, R * ph * grow, 0, Math.PI * 2);
+    g.stroke();
+  }
+  g.globalAlpha = 1;
+}
+
+function mGrid(e, I, colors) {
+  const g = fxG, horizon = H * 0.4, lines = 12 + Math.round(12 * I);
+  const speed = 0.25 + 1.1 * I;
+  g.lineWidth = 1 + 2 * I;
+  for (let i = 0; i < lines; i++) {
+    const z = (i / lines + e * speed) % 1;               // rows roll toward the viewer
+    const y = horizon + (H - horizon) * z * z;
+    g.globalAlpha = 0.1 + 0.9 * z;
+    g.strokeStyle = pick(colors, i);
+    g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
+  }
+  g.strokeStyle = colors[0];
+  for (let j = -12; j <= 12; j++) {
+    g.globalAlpha = 0.45;
+    g.beginPath();
+    g.moveTo(W / 2 + j * W * 0.02, horizon);
+    g.lineTo(W / 2 + j * W * 0.22, H);
+    g.stroke();
+  }
+  g.globalAlpha = 1;
+}
+
+function mGlyphs(e, I, colors) {
+  const g = fxG, gl = cut.glyphArr;
+  const cols = Math.round(8 + 22 * I), size = 12 + 14 * I;
+  g.font = `${size}px system-ui, sans-serif`;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (let c = 0; c < cols; c++) {
+    const x = (c + 0.5) * W / cols;
+    const speed = (0.35 + ((c * 37) % 11) / 11) * (0.5 + I);
+    const offset = ((c * 131) % 997) / 997;
+    const y = wrap(offset * H + e * speed * H * 0.9, H + 80) - 40;
+    for (let k = 0; k < 7; k++) {
+      g.globalAlpha = (1 - k / 7) * 0.95;
+      g.fillStyle = pick(colors, c + k);
+      g.fillText(pick(gl, c * 7 + k + Math.floor(e * 9)), x, y - k * size * 1.05);
+    }
+  }
+  g.globalAlpha = 1;
+}
+
+function mShards(e, I, colors) {
+  const g = fxG, n = 14 + Math.round(64 * I), R = Math.hypot(W, H) * 0.6;
+  g.lineWidth = 1 + 3 * I;
+  for (let i = 0; i < n; i++) {
+    const ang = (i / n) * Math.PI * 2 + e * 0.35 * (i % 2 ? 1 : -1);
+    const ph = (e * (0.8 + I) + ((i * 0.618) % 1)) % 1;
+    const r0 = R * ph, r1 = r0 + R * (0.04 + 0.12 * ((i % 5) / 5));
+    g.globalAlpha = 1 - ph;
+    g.strokeStyle = pick(colors, i);
+    g.beginPath();
+    g.moveTo(W / 2 + Math.cos(ang) * r0, H / 2 + Math.sin(ang) * r0);
+    g.lineTo(W / 2 + Math.cos(ang) * r1, H / 2 + Math.sin(ang) * r1);
+    g.stroke();
+  }
+  g.globalAlpha = 1;
+}
+
+function mLightning(p, I, colors) {
+  const g = fxG;
+  const bolts = Math.floor(Math.random() * (1 + 3 * I) * (p > 0.4 ? 2 : 1));
+  g.shadowBlur = 14;
+  for (let b = 0; b < bolts; b++) {
+    const a = Math.random() * Math.PI * 2, far = Math.hypot(W, H) * 0.6;
+    const tx = W / 2 + Math.cos(a) * far, ty = H / 2 + Math.sin(a) * far;
+    const col = pick(colors, b);
+    g.strokeStyle = col; g.shadowColor = col;
+    g.lineWidth = 1 + Math.random() * (2 + 3 * I);
+    g.globalAlpha = 0.5 + Math.random() * 0.5;
+    g.beginPath();
+    g.moveTo(W / 2 + (Math.random() - 0.5) * 30, H / 2 + (Math.random() - 0.5) * 30);
+    const steps = 9 + Math.floor(I * 12);
+    for (let s = 1; s <= steps; s++) {
+      const f = s / steps, jit = 6 + 90 * (1 - f) * (0.3 + I);
+      g.lineTo(W / 2 + (tx - W / 2) * f + (Math.random() - 0.5) * jit,
+               H / 2 + (ty - H / 2) * f + (Math.random() - 0.5) * jit);
+    }
+    g.stroke();
+  }
+  g.shadowBlur = 0; g.globalAlpha = 1;
+}
+
+function mPulse(e, p, I, colors) {
+  const g = fxG, R = Math.min(W, H) * 0.5;
+  const beat = Math.abs(Math.sin(e * Math.PI * (1.5 + 3 * I)));
+  const grow = p > 0.4 ? 1 + (p - 0.4) * 3 : 1;
+  const rad = Math.max(1, R * (0.08 + 0.32 * beat) * grow);
+  const grad = g.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, rad);
+  grad.addColorStop(0, '#ffffff');
+  grad.addColorStop(0.35, pick(colors, 0));
+  grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  g.globalAlpha = 0.9; g.fillStyle = grad;
+  g.beginPath(); g.arc(W / 2, H / 2, rad, 0, Math.PI * 2); g.fill();
+  for (const q of cut.parts) {                          // specks fly out like stars
+    const ph = (q.r + e * Math.abs(q.sp) * 0.4 * (0.6 + I)) % 1;
+    const d = ph * R * 1.3 * grow;
+    g.fillStyle = pick(colors, q.c);
+    g.globalAlpha = 1 - ph;
+    g.beginPath();
+    g.arc(W / 2 + Math.cos(q.a) * d, H / 2 + Math.sin(q.a) * d, q.s * (0.6 + I), 0, Math.PI * 2);
+    g.fill();
+  }
+  g.globalAlpha = 1;
+}
+
+// ---------- scene motifs, part A. Each takes (t: seconds, p: build progress 0..1, I: intensity, c: colours) ----------
+const MOTIFS = {};
+
+// rarity ranks: light rays fan out, the ladder of rarity glowing
+MOTIFS.rays = (t, p, I, c) => {
+  const g = fxG, R = Math.hypot(W, H), n = 12 + Math.round(30 * I);
+  g.lineWidth = 2 + 6 * I;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + t * (0.2 + 0.5 * I);
+    g.globalAlpha = 0.2 + 0.5 * Math.abs(Math.sin(t * 2 + i));
+    g.strokeStyle = pick(c, i);
+    g.beginPath();
+    g.moveTo(W / 2, H / 2);
+    g.lineTo(W / 2 + Math.cos(a) * R * (0.2 + 0.8 * p), H / 2 + Math.sin(a) * R * (0.2 + 0.8 * p));
+    g.stroke();
+  }
+  g.globalAlpha = 1;
+};
+
+// aleph and infinity: a lemniscate (figure eight) traced over and over, with a glyph running along it
+MOTIFS.lemniscate = (t, p, I, c) => {
+  const g = fxG, A = Math.min(W, H) * 0.34 * (0.5 + 0.5 * p), cx = W / 2, cy = H / 2;
+  const at = u => { const d = 1 + Math.sin(u) ** 2; return [cx + A * Math.cos(u) / d, cy + A * Math.sin(u) * Math.cos(u) / d]; };
+  g.lineWidth = 2 + 3 * I;
+  for (let k = 0; k < 1 + Math.round(2 * I); k++) {
+    g.strokeStyle = pick(c, k);
+    g.globalAlpha = 0.7;
+    g.beginPath();
+    for (let s = 0; s <= 160; s++) {
+      const [x, y] = at((s / 160) * Math.PI * 2 + k * 0.6);
+      if (s) g.lineTo(x, y); else g.moveTo(x, y);
+    }
+    g.stroke();
+  }
+  const [hx, hy] = at(t * (1 + 2 * I));
+  g.globalAlpha = 1;
+  g.fillStyle = c[0];
+  g.font = `${30 + 40 * I}px system-ui, sans-serif`;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(pick(cut.glyphArr, Math.floor(t * 4)), hx, hy);
+};
+
+// omega: the Ω is drawn stroke by stroke, its feet drop, then sparks ring it
+MOTIFS.omega = (t, p, I, c) => {
+  const g = fxG, R = Math.min(W, H) * 0.26, cx = W / 2, cy = H / 2 - R * 0.25;
+  const a0 = Math.PI * 0.75, span = Math.PI * 1.5 * Math.min(1, p * 1.25);
+  g.lineCap = 'round';
+  g.lineWidth = 4 + 8 * I;
+  g.strokeStyle = c[0]; g.shadowColor = c[0]; g.shadowBlur = 18 + 20 * I;
+  g.beginPath(); g.arc(cx, cy, R, a0, a0 + span); g.stroke();
+  const feet = Math.max(0, Math.min(1, (p - 0.6) / 0.4));
+  if (feet > 0) {
+    g.beginPath();
+    for (const a of [a0, a0 + Math.PI * 1.5]) {
+      const x = cx + Math.cos(a) * R, y = cy + Math.sin(a) * R;
+      g.moveTo(x, y); g.lineTo(x, y + R * 0.55 * feet);
+    }
+    g.stroke();
+  }
+  g.shadowBlur = 0;
+  g.globalAlpha = 0.5;
+  g.strokeStyle = c[1] || c[0];
+  g.lineWidth = 1 + 2 * I;
+  for (let i = 0; i < 24; i++) {
+    const a = (i / 24) * Math.PI * 2 + t * 0.3, r = R * (1.25 + 0.6 * ((t * 0.7 + i / 24) % 1));
+    g.beginPath();
+    g.moveTo(cx + Math.cos(a) * R * 1.1, cy + Math.sin(a) * R * 1.1);
+    g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    g.stroke();
+  }
+  g.globalAlpha = 1;
+};
+
+// Greek lowercase, Hebrew and runes: a ring of letters turning in opposite directions
+MOTIFS.glyphring = (t, p, I, c) => {
+  const g = fxG, gl = cut.glyphArr, n = Math.max(8, gl.length * 2);
+  const R = Math.min(W, H) * (0.22 + 0.2 * p), cx = W / 2, cy = H / 2;
+  g.strokeStyle = c[0]; g.lineWidth = 1 + 2 * I; g.globalAlpha = 0.35;
+  g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.stroke();
+  g.font = `${16 + 16 * I}px system-ui, sans-serif`;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + t * (0.2 + 0.5 * I) * (i % 2 ? -1 : 1);
+    g.globalAlpha = 0.9;
+    g.fillStyle = pick(c, i);
+    g.fillText(pick(gl, i), cx + Math.cos(a) * R, cy + Math.sin(a) * R);
+  }
+  g.globalAlpha = 1;
+};
+
+// Japanese: a red sun climbs from below, with kana falling through it
+MOTIFS.sunrise = (t, p, I, c) => {
+  const g = fxG, R = Math.min(W, H) * 0.3, cx = W / 2, cy = H * (0.95 - 0.45 * p);
+  const glow = g.createRadialGradient(cx, cy, R * 0.2, cx, cy, R * 1.6);
+  glow.addColorStop(0, c[0]); glow.addColorStop(0.6, 'rgba(255, 40, 60, 0.45)'); glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  g.globalAlpha = 0.9; g.fillStyle = glow;
+  g.beginPath(); g.arc(cx, cy, R * 1.6, 0, Math.PI * 2); g.fill();
+  g.globalAlpha = 1; g.fillStyle = c[0];
+  g.beginPath(); g.arc(cx, cy, R * 0.5, 0, Math.PI * 2); g.fill();
+  mGlyphs(t, I, c);
+};
+
+// space: stars stream out of the centre into a warp, and a planet rises
+MOTIFS.warp = (t, p, I, c) => {
+  const g = fxG, cx = W / 2, cy = H / 2, n = 60 + Math.round(140 * I);
+  g.lineWidth = 1 + 2 * I;
+  for (let i = 0; i < n; i++) {
+    const ph = (t * (0.3 + I) + (i * 0.618034) % 1) % 1;
+    const a = i * 2.399963, d = ph * ph;
+    g.globalAlpha = ph;
+    g.strokeStyle = pick(c, i);
+    g.beginPath();
+    g.moveTo(cx + Math.cos(a) * d * W, cy + Math.sin(a) * d * H);
+    g.lineTo(cx + Math.cos(a) * d * W * 1.08, cy + Math.sin(a) * d * H * 1.08);
+    g.stroke();
+  }
+  const R = Math.min(W, H) * 0.12;
+  g.globalAlpha = Math.min(1, p * 1.5);
+  const planet = g.createRadialGradient(cx - R * 0.3, cy - R * 0.3, R * 0.1, cx, cy, R);
+  planet.addColorStop(0, '#ffffff'); planet.addColorStop(0.5, c[0]); planet.addColorStop(1, '#000000');
+  g.fillStyle = planet;
+  g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
+  g.globalAlpha = 1;
+};
+
+// reality: framed planes tilt and slide past each other, as if the layers are breaking apart
+MOTIFS.planes = (t, p, I, c) => {
+  const g = fxG, n = 4 + Math.round(8 * I);
+  g.lineWidth = 2 + 2 * I;
+  for (let i = 0; i < n; i++) {
+    const w = W * (0.3 + 0.5 * ((i * 0.37) % 1)), h = H * (0.2 + 0.4 * ((i * 0.61) % 1));
+    const ang = Math.sin(t * (0.3 + I) + i) * 0.4 * (0.4 + p);
+    const dx = Math.sin(t * 0.7 + i * 1.7) * W * 0.12 * (0.5 + p);
+    g.save();
+    g.translate(W / 2 + dx, H / 2);
+    g.rotate(ang);
+    g.globalAlpha = 0.35 + 0.4 * p;
+    g.strokeStyle = pick(c, i);
+    g.strokeRect(-w / 2, -h / 2, w, h);
+    g.restore();
+  }
+  g.globalAlpha = 1;
+};
+
+// expansion: rings zoom down by powers of ten, each labelled with an SI prefix
+MOTIFS.zoom = (t, p, I, c) => {
+  const g = fxG, cx = W / 2, cy = H / 2, R = Math.hypot(W, H) * 0.5, gl = cut.glyphArr;
+  g.font = `${12 + 10 * I}px system-ui, sans-serif`;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (let k = 0; k < 14; k++) {
+    const z = (k / 14 + t * (0.15 + 0.5 * I)) % 1;
+    const r = R * Math.pow(0.06, z);
+    g.globalAlpha = 0.25 + 0.6 * (1 - z);
+    g.strokeStyle = pick(c, k);
+    g.lineWidth = 1 + 3 * (1 - z);
+    g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = pick(c, k);
+    g.fillText(pick(gl, k), cx, cy - r);
+  }
+  g.globalAlpha = 1;
+};
+
+// elemental: four orbs circle on a tilted ring, each labelled F, W, E or A
+MOTIFS.orbs = (t, p, I, c) => {
+  const g = fxG, cx = W / 2, cy = H / 2, R = Math.min(W, H) * (0.3 * (0.5 + 0.5 * p) + 0.1), gl = cut.glyphArr;
+  const rad = 26 + 18 * I;
+  g.font = `${18 + 14 * I}px system-ui, sans-serif`;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (let i = 0; i < 4; i++) {
+    const a = t * (0.5 + I) + (i * Math.PI) / 2;
+    const x = cx + Math.cos(a) * R, y = cy + Math.sin(a) * R * 0.45;
+    const grad = g.createRadialGradient(x, y, 1, x, y, rad);
+    grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.4, pick(c, i)); grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    g.globalAlpha = 0.9; g.fillStyle = grad;
+    g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill();
+    g.globalAlpha = 1; g.fillStyle = '#000000';
+    g.fillText(pick(gl, i), x, y);
+  }
+};
+
+// ---------- scene motifs, part B ----------
+
+// gems: faceted crystal turning with light flaring through it
+MOTIFS.facets = (t, p, I, c) => {
+  const g = fxG, cx = W / 2, cy = H / 2, R = Math.min(W, H) * (0.12 + 0.3 * p), n = 6 + Math.round(6 * I);
+  for (let i = 0; i < n; i++) {
+    const a0 = (i / n) * Math.PI * 2 + t * 0.4, a1 = a0 + Math.PI / n;
+    const r = R * (0.8 + 0.4 * Math.sin(t * 2 + i));
+    g.globalAlpha = 0.5 + 0.4 * Math.abs(Math.sin(t + i));
+    g.fillStyle = pick(c, i);
+    g.beginPath();
+    g.moveTo(cx, cy);
+    g.lineTo(cx + Math.cos(a0) * r, cy + Math.sin(a0) * r);
+    g.lineTo(cx + Math.cos(a1) * r * 1.3, cy + Math.sin(a1) * r * 1.3);
+    g.closePath(); g.fill();
+  }
+  g.globalAlpha = 0.8; g.strokeStyle = '#ffffff'; g.lineWidth = 1 + I;
+  for (let i = 0; i < 4 + 6 * I; i++) {                  // prism beams
+    const a = t * 0.6 + i * 1.3;
+    g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a) * W, cy + Math.sin(a) * H); g.stroke();
+  }
+  g.globalAlpha = 1;
+};
+
+// creatures: claw marks rip diagonally across the screen, one after another
+MOTIFS.claws = (t, p, I, c) => {
+  const g = fxG, marks = Math.min(4, Math.floor(p * 5) + 1), len = Math.hypot(W, H) * 0.6;
+  g.lineCap = 'round'; g.shadowColor = c[0]; g.shadowBlur = 14;
+  for (let m = 0; m < marks; m++) {
+    const x0 = W * (0.15 + 0.2 * m), y0 = H * 0.1 + m * 4, ang = 1.1 + 0.05 * m;
+    for (let k = 0; k < 3; k++) {
+      const off = (k - 1) * (14 + 10 * I);
+      g.strokeStyle = pick(c, k + m);
+      g.lineWidth = 3 + 6 * I;
+      g.beginPath();
+      g.moveTo(x0 + off, y0);
+      g.quadraticCurveTo(x0 + off + len * 0.35, y0 + len * 0.2,
+                         x0 + off + Math.cos(ang) * len * 0.8, y0 + Math.sin(ang) * len * 0.8);
+      g.stroke();
+    }
+  }
+  g.shadowBlur = 0;
+};
+
+// constellation: fixed stars join up with lines, one more star each beat of the build-up
+MOTIFS.constellation = (t, p, I, c) => {
+  const g = fxG, n = 14 + Math.round(18 * I), pts = [];
+  for (let i = 0; i < n; i++) {
+    pts.push([W * (0.1 + 0.8 * ((i * 0.618 * 7.31) % 1)), H * (0.1 + 0.8 * ((i * 0.37 * 3.7) % 1))]);
+  }
+  const lit = Math.floor(p * (n - 1));
+  g.strokeStyle = c[0]; g.lineWidth = 1 + I; g.globalAlpha = 0.8;
+  g.beginPath();
+  for (let i = 0; i < lit; i++) { g.moveTo(pts[i][0], pts[i][1]); g.lineTo(pts[i + 1][0], pts[i + 1][1]); }
+  g.stroke();
+  g.font = `${14 + 10 * I}px system-ui, sans-serif`;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (let i = 0; i <= lit; i++) {
+    g.globalAlpha = 0.6 + 0.4 * Math.sin(t * 3 + i);
+    g.fillStyle = pick(c, i);
+    g.fillText(pick(cut.glyphArr, i), pts[i][0], pts[i][1]);
+  }
+  g.globalAlpha = 1;
+};
+
+// hiragana: ink drops bloom and fade like brush strokes on paper
+MOTIFS.ink = (t, p, I, c) => {
+  const g = fxG, n = 6 + Math.round(10 * I);
+  for (let i = 0; i < n; i++) {
+    const cx = W * ((i * 0.37) % 1), cy = H * ((i * 0.73) % 1);
+    const ph = (t * 0.25 + i / n) % 1, r = Math.min(W, H) * 0.5 * ph;
+    g.globalAlpha = (1 - ph) * 0.7;
+    g.fillStyle = pick(c, i);
+    g.beginPath();
+    for (let k = 0; k <= 24; k++) {
+      const a = (k / 24) * Math.PI * 2, rr = r * (1 + 0.15 * Math.sin(a * 3 + t + i));
+      const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
+      if (k) g.lineTo(x, y); else g.moveTo(x, y);
+    }
+    g.closePath(); g.fill();
+  }
+  g.globalAlpha = 1;
+};
+
+// katakana: columns of characters fall like a data stream
+MOTIFS.datarain = (t, p, I, c) => { mGlyphs(t * 0.6, I, c); };
+
+// roman: arches rise from the ground, each topped with a numeral
+MOTIFS.arch = (t, p, I, c) => {
+  const g = fxG, gl = cut.glyphArr, x = W / 2;
+  g.lineWidth = 3 + 4 * I;
+  g.font = `${20 + 16 * I}px system-ui, sans-serif`;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (let i = 0; i < 5; i++) {
+    const w = W * (0.12 + 0.05 * i) * (0.4 + 0.6 * p), base = H * (0.85 - 0.04 * i);
+    const rise = Math.min(1, p * 1.5 + i * 0.05), top = base - H * 0.3 * rise;
+    g.strokeStyle = pick(c, i); g.globalAlpha = 0.4 + 0.5 * rise;
+    g.beginPath();
+    g.moveTo(x - w, base); g.lineTo(x - w, top);
+    g.arc(x, top, w, Math.PI, 0);
+    g.lineTo(x + w, base);
+    g.stroke();
+    g.fillStyle = pick(c, i);
+    g.fillText(pick(gl, i), x, top - w - 20);
+  }
+  g.globalAlpha = 1;
+};
+
+// metric ranks: power bars climb, each with an SI prefix that grows with the scale
+MOTIFS.bars = (t, p, I, c) => {
+  const g = fxG, gl = cut.glyphArr, n = 8, bw = W / (n * 1.6);
+  g.font = `${14 + 10 * I}px system-ui, sans-serif`;
+  g.textAlign = 'center';
+  for (let i = 0; i < n; i++) {
+    const h = H * (0.1 + 0.6 * (i + 1) / n) * Math.min(1, p * 1.2 + i * 0.03) * (0.9 + 0.1 * Math.sin(t * 4 + i));
+    const x = W / 2 + (i - n / 2 + 0.5) * bw * 1.4;
+    g.globalAlpha = 0.85; g.fillStyle = pick(c, i);
+    g.fillRect(x - bw / 2, H * 0.9 - h, bw, h);
+    g.globalAlpha = 1; g.fillStyle = '#ffffff';
+    g.fillText(pick(gl, i), x, H * 0.9 - h - 14);
+  }
+};
+
+// cosmic structure: a spiral galaxy turns, its inner stars orbiting faster around a dark core
+MOTIFS.galaxy = (t, p, I, c) => {
+  const g = fxG, cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.45, n = 120 + Math.round(260 * I);
+  for (let i = 0; i < n; i++) {
+    const arm = i % 2, k = (i / n) * 3.2, r = R * (0.08 + 0.92 * ((i * 0.618) % 1));
+    const a = arm * Math.PI + k * 2.2 + t * (0.6 / (0.2 + r / R));
+    g.fillStyle = pick(c, i);
+    g.globalAlpha = 0.5 + 0.5 * ((i * 0.37) % 1);
+    g.beginPath(); g.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.5, 1 + 1.5 * I, 0, Math.PI * 2); g.fill();
+  }
+  const core = g.createRadialGradient(cx, cy, 0, cx, cy, R * 0.25);
+  core.addColorStop(0, '#000000'); core.addColorStop(0.6, c[0]); core.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  g.globalAlpha = 0.9; g.fillStyle = core;
+  g.beginPath(); g.arc(cx, cy, R * 0.25, 0, Math.PI * 2); g.fill();
+  g.globalAlpha = 1;
+};
+
+// secret: drifting dark mist, and a slit of light that opens through it
+MOTIFS.veil = (t, p, I, c) => {
+  const g = fxG;
+  for (let i = 0; i < 10; i++) {
+    const x = W * ((i * 0.31 + t * 0.02 * (1 + (i % 3))) % 1), y = H * ((i * 0.57) % 1);
+    const r = Math.min(W, H) * (0.3 + 0.2 * Math.sin(t * 0.5 + i));
+    const mist = g.createRadialGradient(x, y, 0, x, y, r);
+    mist.addColorStop(0, 'rgba(10, 0, 20, 0.75)'); mist.addColorStop(1, 'rgba(10, 0, 20, 0)');
+    g.fillStyle = mist; g.fillRect(0, 0, W, H);
+  }
+  const open = Math.min(1, p) * H * 0.22;
+  const slit = g.createLinearGradient(0, H / 2 - open, 0, H / 2 + open);
+  slit.addColorStop(0, 'rgba(0, 0, 0, 0)'); slit.addColorStop(0.5, c[0]); slit.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  g.globalAlpha = 0.8; g.fillStyle = slit;
+  g.fillRect(0, H / 2 - open, W, open * 2);
+  g.globalAlpha = 1;
+};
+
+// secret II: cracks spread from the centre, branching, with the same pattern every frame
+MOTIFS.cracks = (t, p, I, c) => {
+  const g = fxG, cx = W / 2, cy = H / 2, depth = 4 + Math.round(3 * I);
+  let lim = Math.floor(p * 40) + 1, seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  g.lineCap = 'round';
+  g.strokeStyle = c[0]; g.shadowColor = c[0]; g.shadowBlur = 10;
+  const branch = (x, y, a, len, d) => {
+    if (d > depth || lim-- <= 0) return;
+    const x2 = x + Math.cos(a) * len, y2 = y + Math.sin(a) * len;
+    g.lineWidth = Math.max(1, (depth - d) * 1.2 + I * 2);
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x2, y2); g.stroke();
+    branch(x2, y2, a + (rnd() - 0.5) * 0.9, len * 0.85, d + 1);
+    if (rnd() < 0.6) branch(x2, y2, a + (rnd() - 0.5) * 1.6, len * 0.7, d + 1);
+  };
+  for (let k = 0; k < 6; k++) branch(cx, cy, (k / 6) * Math.PI * 2 + rnd(), Math.min(W, H) * 0.22, 0);
+  g.shadowBlur = 0;
+};
+
+// ---------- round-4 motifs: real constellations, particles and the periodic table ----------
+
+// Star positions are 0..1 across a square, with the lines that join them, as in the sky
+const CONSTELLATIONS = [
+  { name: 'Orion', stars: [[0.45, 0.05], [0.22, 0.18], [0.78, 0.16], [0.40, 0.50], [0.50, 0.48], [0.60, 0.50], [0.28, 0.90], [0.80, 0.88]],
+    lines: [[0, 1], [0, 2], [1, 3], [2, 5], [3, 4], [4, 5], [3, 6], [5, 7]] },
+  { name: 'Big Dipper', stars: [[0.10, 0.25], [0.18, 0.35], [0.34, 0.40], [0.42, 0.28], [0.55, 0.30], [0.66, 0.36], [0.82, 0.42]],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [4, 5], [5, 6]] },
+  { name: 'Cassiopeia', stars: [[0.10, 0.40], [0.30, 0.20], [0.50, 0.45], [0.70, 0.15], [0.90, 0.35]],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 4]] },
+  { name: 'Cygnus', stars: [[0.50, 0.05], [0.50, 0.45], [0.50, 0.95], [0.12, 0.38], [0.88, 0.55]],
+    lines: [[0, 1], [1, 2], [3, 1], [1, 4]] },
+  { name: 'Crux', stars: [[0.50, 0.05], [0.15, 0.45], [0.48, 0.95], [0.85, 0.55]],
+    lines: [[0, 2], [1, 3]] },
+  { name: 'Pegasus', stars: [[0.20, 0.20], [0.80, 0.20], [0.80, 0.80], [0.20, 0.80], [0.05, 0.02]],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 0], [0, 4]] },
+  { name: 'Scorpius', stars: [[0.10, 0.10], [0.18, 0.20], [0.26, 0.34], [0.36, 0.44], [0.46, 0.52], [0.56, 0.60], [0.66, 0.72], [0.74, 0.84], [0.82, 0.92]],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8]] },
+];
+
+// The shape for a constellation: its own when we have its stars (Ursa Major shows the Big Dipper asterism),
+// otherwise one of the shapes we have, picked from its name so it is the same every time
+const SHAPE_ALIAS = { 'Ursa Major': 'Big Dipper' };
+function constellationFor(name) {
+  const want = SHAPE_ALIAS[name] || name;
+  const own = CONSTELLATIONS.find(s => s.name === want);
+  if (own) return own;
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return CONSTELLATIONS[h % CONSTELLATIONS.length];
+}
+
+function drawConstellation(shape, t, p, I, c) {
+  const g = fxG, S = Math.min(W, H) * 0.72, ox = W / 2 - S / 2, oy = H / 2 - S / 2;
+  const pt = i => [ox + shape.stars[i][0] * S, oy + shape.stars[i][1] * S];
+  g.fillStyle = '#ffffff';
+  for (let i = 0; i < 90; i++) {                       // faint field behind the figure
+    g.globalAlpha = 0.15 + 0.2 * Math.sin(t * 2 + i);
+    g.fillRect(((i * 0.618034 * 7.31) % 1) * W, ((i * 0.37 * 3.7) % 1) * H, 1.5, 1.5);
+  }
+  const lines = shape.lines, lit = p * lines.length;   // lines are drawn one after another
+  const firstLine = shape.stars.map((_, i) => lines.findIndex(([a, b]) => a === i || b === i));
+  g.lineCap = 'round'; g.shadowColor = c[0]; g.shadowBlur = 12;
+  g.strokeStyle = c[0]; g.lineWidth = 2 + 2 * I;
+  for (let k = 0; k < lines.length; k++) {
+    const f = Math.max(0, Math.min(1, lit - k));
+    if (f <= 0) break;
+    const [ax, ay] = pt(lines[k][0]), [bx, by] = pt(lines[k][1]);
+    g.globalAlpha = 0.9;
+    g.beginPath(); g.moveTo(ax, ay); g.lineTo(ax + (bx - ax) * f, ay + (by - ay) * f); g.stroke();
+  }
+  g.shadowBlur = 0;
+  shape.stars.forEach((_, i) => {                      // each star lights when its first line reaches it
+    const on = p >= 1 || (firstLine[i] >= 0 && lit > firstLine[i]);
+    const [x, y] = pt(i);
+    g.globalAlpha = on ? 0.75 + 0.25 * Math.sin(t * 3 + i) : 0.12;
+    g.fillStyle = pick(c, i);
+    g.beginPath(); g.arc(x, y, 3 + 2 * I, 0, Math.PI * 2); g.fill();
+  });
+  g.globalAlpha = 1;                                   // the rolled name is shown by the scene, not the shape
+}
+
+MOTIFS.constellation = (t, p, I, c) => drawConstellation(constellationFor(cut.item), t, p, I, c);
+
+// Particles: letters for particles spiral in towards a collision at the centre, sparks fly out on impact
+MOTIFS.particles = (t, p, I, c) => {
+  const g = fxG, gl = cut.glyphArr, cx = W / 2, cy = H / 2, R = Math.hypot(W, H) * 0.5;
+  const n = 24 + Math.round(60 * I);
+  g.font = `${14 + 12 * I}px system-ui, sans-serif`;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (let i = 0; i < n; i++) {
+    const ph = (t * (0.25 + 0.6 * I) + i * 0.618034) % 1;      // how far along its path (0 far, 1 at the centre)
+    const a = i * 2.399963 + t * 0.2 * (i % 2 ? 1 : -1);
+    const r = R * 0.9 * Math.pow(1 - ph, 2);
+    const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+    g.strokeStyle = pick(c, i); g.lineWidth = 1 + I;
+    g.globalAlpha = 0.25 + 0.5 * ph;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(cx + Math.cos(a) * r * 1.1, cy + Math.sin(a) * r * 1.1); g.stroke();
+    g.globalAlpha = 0.9;
+    g.fillStyle = pick(c, i);
+    g.fillText(pick(gl, i), x, y);
+  }
+  const burst = Math.max(0, (p - 0.6) / 0.4);                  // collisions spark once the particles meet
+  if (burst > 0) {
+    g.strokeStyle = c[0]; g.lineWidth = 1 + 2 * I;
+    for (let k = 0; k < 14; k++) {
+      const a = k * (Math.PI * 2 / 14) + t * 0.5, r0 = 6, r1 = 20 + 260 * burst * (0.5 + 0.5 * Math.sin(k * 1.7));
+      g.globalAlpha = 1 - burst * 0.6;
+      g.beginPath(); g.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
+      g.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); g.stroke();
+    }
+  }
+  g.globalAlpha = 1;
+};
+
+// Periodic table: element cells light in atomic-number order; the rolled element is picked out at the end
+function periodPos(z) {                                       // [row, column] on the usual 18-column table
+  if (z === 1) return [1, 1];
+  if (z === 2) return [1, 18];
+  if (z <= 4) return [2, z - 2];
+  if (z <= 10) return [2, z + 8];
+  if (z <= 12) return [3, z - 10];
+  if (z <= 18) return [3, z];
+  if (z <= 36) return [4, z - 18];
+  if (z <= 54) return [5, z - 36];
+  if (z <= 56) return [6, z - 54];
+  if (z <= 71) return [9, z - 54];                            // lanthanides
+  if (z <= 86) return [6, z - 68];
+  if (z <= 88) return [7, z - 86];
+  if (z <= 103) return [10, z - 86];                          // actinides
+  return [7, z - 100];
+}
+const symbolOf = item => (item.match(/\(([^)]+)\)/) || [0, item])[1];
+
+MOTIFS.periodic = (t, p, I, c) => {
+  const g = fxG, cell = Math.min((W * 0.92) / 18, (H * 0.46) / 10);
+  const x0 = W / 2 - 9 * cell, y0 = H * 0.1;             // high on the screen, clear of the name at the bottom
+  const lit = Math.floor(p * 118), picked = cut.ii;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (let z = 1; z <= 118; z++) {
+    const [row, col] = periodPos(z);
+    const x = x0 + (col - 1) * cell, y = y0 + (row - 1) * cell;
+    const on = z <= lit;
+    g.globalAlpha = on ? 0.35 + 0.25 * Math.sin(t * 2 + z) : 0.08;
+    g.fillStyle = pick(c, z);
+    g.fillRect(x + 2, y + 2, cell - 4, cell - 4);
+    g.globalAlpha = on ? 0.95 : 0.25;
+    g.fillStyle = '#ffffff';
+    g.font = `${Math.max(9, cell * 0.36)}px system-ui, sans-serif`;
+    g.fillText(on ? symbolOf(ELEMENT_ITEMS[z - 1]) : '', x + cell / 2, y + cell / 2);
+  }
+  if (picked >= 0 && p > 0.9) {                               // the rolled element, large in the middle
+    const z = picked + 1, [row, col] = periodPos(z);
+    g.globalAlpha = 1;
+    g.strokeStyle = '#ffffff'; g.lineWidth = 3 + I * 3;
+    g.strokeRect(x0 + (col - 1) * cell, y0 + (row - 1) * cell, cell, cell);
+    g.globalAlpha = (p - 0.9) / 0.1;
+    g.fillStyle = c[0];
+    g.font = `${Math.min(W, H) * 0.3}px system-ui, sans-serif`;
+    g.fillText(symbolOf(ELEMENT_ITEMS[picked]), W / 2, H / 2);
+  }
+  g.globalAlpha = 1;
+};
+
+// ---------- named tiers added in round 4: Common Drops (no cutscene), Particles and Elements ----------
+const SYMBOLS = {};   // one symbol per tier, drawn on its branch node
+
+const COMMON_ITEMS = ['Pebble', 'Twig', 'Dust Mote', 'Leaf', 'Acorn', 'Feather', 'Pinecone', 'Seashell', 'Button',
+  'Bottle Cap', 'Penny', 'Paper Clip', 'Marble', 'Ribbon', 'Loose Thread', 'Crayon', 'Sock', 'Stick', 'Bean', 'Cork',
+  'Matchstick', 'Lint Ball', 'Glass Bead', 'Rubber Band', 'Sticker', 'Old Key', 'Plastic Spoon', 'Candle Stub',
+  'Chalk', 'Ticket Stub'];
+
+const PARTICLE_ITEMS = ['Electron (e-)', 'Positron (e+)', 'Muon (mu-)', 'Tau (tau-)', 'Electron neutrino (nu-e)',
+  'Muon neutrino (nu-mu)', 'Tau neutrino (nu-tau)', 'Up quark (u)', 'Down quark (d)', 'Strange quark (s)',
+  'Charm quark (c)', 'Bottom quark (b)', 'Top quark (t)', 'Photon (gamma)', 'Gluon (g)', 'W boson (W)', 'Z boson (Z)',
+  'Higgs boson (H)', 'Proton (p)', 'Neutron (n)', 'Pion (pi)', 'Kaon (K)', 'Lambda baryon (Lambda)',
+  'Sigma baryon (Sigma)', 'Omega baryon (Omega)', 'Antiproton (p-bar)', 'Deuteron (d)', 'Alpha particle (alpha)',
+  'Graviton (hypothetical, G)', 'Axion (hypothetical, a)'];
+
+// Elements in atomic-number order: index 0 is hydrogen (Z = 1)
+const ELEMENT_ITEMS = ['Hydrogen (H)', 'Helium (He)', 'Lithium (Li)', 'Beryllium (Be)', 'Boron (B)', 'Carbon (C)',
+  'Nitrogen (N)', 'Oxygen (O)', 'Fluorine (F)', 'Neon (Ne)', 'Sodium (Na)', 'Magnesium (Mg)', 'Aluminum (Al)',
+  'Silicon (Si)', 'Phosphorus (P)', 'Sulfur (S)', 'Chlorine (Cl)', 'Argon (Ar)', 'Potassium (K)', 'Calcium (Ca)',
+  'Scandium (Sc)', 'Titanium (Ti)', 'Vanadium (V)', 'Chromium (Cr)', 'Manganese (Mn)', 'Iron (Fe)', 'Cobalt (Co)',
+  'Nickel (Ni)', 'Copper (Cu)', 'Zinc (Zn)', 'Gallium (Ga)', 'Germanium (Ge)', 'Arsenic (As)', 'Selenium (Se)',
+  'Bromine (Br)', 'Krypton (Kr)', 'Rubidium (Rb)', 'Strontium (Sr)', 'Yttrium (Y)', 'Zirconium (Zr)',
+  'Niobium (Nb)', 'Molybdenum (Mo)', 'Technetium (Tc)', 'Ruthenium (Ru)', 'Rhodium (Rh)', 'Palladium (Pd)',
+  'Silver (Ag)', 'Cadmium (Cd)', 'Indium (In)', 'Tin (Sn)', 'Antimony (Sb)', 'Tellurium (Te)', 'Iodine (I)',
+  'Xenon (Xe)', 'Cesium (Cs)', 'Barium (Ba)', 'Lanthanum (La)', 'Cerium (Ce)', 'Praseodymium (Pr)',
+  'Neodymium (Nd)', 'Promethium (Pm)', 'Samarium (Sm)', 'Europium (Eu)', 'Gadolinium (Gd)', 'Terbium (Tb)',
+  'Dysprosium (Dy)', 'Holmium (Ho)', 'Erbium (Er)', 'Thulium (Tm)', 'Ytterbium (Yb)', 'Lutetium (Lu)',
+  'Hafnium (Hf)', 'Tantalum (Ta)', 'Tungsten (W)', 'Rhenium (Re)', 'Osmium (Os)', 'Iridium (Ir)', 'Platinum (Pt)',
+  'Gold (Au)', 'Mercury (Hg)', 'Thallium (Tl)', 'Lead (Pb)', 'Bismuth (Bi)', 'Polonium (Po)', 'Astatine (At)',
+  'Radon (Rn)', 'Francium (Fr)', 'Radium (Ra)', 'Actinium (Ac)', 'Thorium (Th)', 'Protactinium (Pa)',
+  'Uranium (U)', 'Neptunium (Np)', 'Plutonium (Pu)', 'Americium (Am)', 'Curium (Cm)', 'Berkelium (Bk)',
+  'Californium (Cf)', 'Einsteinium (Es)', 'Fermium (Fm)', 'Mendelevium (Md)', 'Nobelium (No)', 'Lawrencium (Lr)',
+  'Rutherfordium (Rf)', 'Dubnium (Db)', 'Seaborgium (Sg)', 'Bohrium (Bh)', 'Hassium (Hs)', 'Meitnerium (Mt)',
+  'Darmstadtium (Ds)', 'Roentgenium (Rg)', 'Copernicium (Cn)', 'Nihonium (Nh)', 'Flerovium (Fl)',
+  'Moscovium (Mc)', 'Livermorium (Lv)', 'Tennessine (Ts)', 'Oganesson (Og)'];
+
+// Each named tier: items, title, [effect, colour], cutscene [motif, colours, glyphs] ('none' = no cutscene), symbol
+const NAMED_TIERS = {
+  common_section: {
+    items: COMMON_ITEMS, title: 'Common Drops', style: ['neon', '#b0bec5'],
+    cut: ['none', ['#b0bec5', '#ffffff'], ''], symbol: '•',
+  },
+  particle_section: {
+    items: PARTICLE_ITEMS, title: 'Particles', style: ['hologram', '#40c4ff'],
+    cut: ['particles', ['#40c4ff', '#ffffff', '#ff4081', '#ffd740', '#69f0ae'], 'eμτνγgWZHpnπKΛΣΩ'], symbol: '⚛',
+  },
+  element_section: {
+    items: ELEMENT_ITEMS, title: 'Elements', style: ['chroma', '#00e5ff'],
+    cut: ['periodic', ['#00e5ff', '#ffffff', '#ffd740'], ''], symbol: '⚗',
+  },
+};
+
+// ---------- odds: a logarithmic scale from the first tier to "You" ----------
+// Each tier is rarer than the one before by the same factor, so equal steps along the branch are equal
+// multiples of rarity. "You" is set to 1 in 10^66 (one unvigintillion). Browser random numbers only reach
+// about 1 in 10^16, so tier rolls use exact big-integer weights and crypto randomness.
+const YOU_ODDS_EXP = 66;      // "You" comes up once in 10^66 rolls
+const ITEM_SPAN = 2;          // inside a tier, the last item is 10^2 times rarer than the first
+const TIER_SCALE = 1e80;      // weights are scaled to whole numbers with this many digits of room
+let TIER_W = [];              // cumulative BigInt weight of tiers 0..k
+let TIER_W_TOTAL = 0n;
+let TIER_FACTOR = 1;          // each tier is this many times rarer than the one before
+
+// Finds the factor between neighbouring tiers that puts the last tier at 10^-YOU_ODDS_EXP
+function buildOdds(n) {
+  const lastChance = rho => {
+    let s = 0;
+    for (let k = 0; k < n; k++) s += Math.pow(rho, k);
+    return Math.pow(rho, n - 1) / s;
+  };
+  let lo = 0.5, hi = 0.99999;
+  for (let it = 0; it < 200; it++) {
+    const mid = (lo + hi) / 2;
+    if (Math.log10(lastChance(mid)) > -YOU_ODDS_EXP) hi = mid; else lo = mid;
+  }
+  TIER_FACTOR = (lo + hi) / 2;
+  let acc = 0n;
+  TIER_W = new Array(n);
+  for (let k = 0; k < n; k++) {
+    acc += BigInt(Math.max(1, Math.round(Math.pow(TIER_FACTOR, k) * TIER_SCALE)));
+    TIER_W[k] = acc;
+  }
+  TIER_W_TOTAL = acc;
+}
+
+// A uniform whole number below total, from crypto random bytes (no rounding, no bias)
+function randBelow(total) {
+  const bits = total.toString(2).length;
+  const bytes = new Uint8Array((bits + 7) >> 3);
+  const mask = (1n << BigInt(bits)) - 1n;
+  for (;;) {
+    crypto.getRandomValues(bytes);
+    let x = 0n;
+    for (const b of bytes) x = (x << 8n) | BigInt(b);
+    x &= mask;
+    if (x < total) return x;
+  }
+}
+
+// Probability of tier k (exact to floating point, even when it is 10^-66)
+function tierChance(k) {
+  const w = TIER_W[k] - (k ? TIER_W[k - 1] : 0n);
+  return Number(w) / Number(TIER_W_TOTAL);
+}
+
+// The tier for one roll
+function pickTier() {
+  const x = randBelow(TIER_W_TOTAL);
+  let lo = 0, hi = TIER_W.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (TIER_W[mid] > x) hi = mid; else lo = mid + 1;
+  }
+  return lo;
+}
+
+// The item inside a tier: earlier items are more common, on the same logarithmic scale
+function pickItem(n) {
+  if (n <= 1) return 0;
+  const r = Math.pow(10, -ITEM_SPAN / (n - 1));   // each item is this many times rarer than the one before
+  const u = Math.random();
+  const j = Math.ceil(Math.log(1 - u * (1 - Math.pow(r, n))) / Math.log(r)) - 1;
+  return Math.min(n - 1, Math.max(0, j));
+}
+
+// Readable odds: "1 in 4.2", "1 in 14,000" or "1 in 3.8 x 10^66"
+function oddsText(p) {
+  const n = 1 / p;
+  if (n < 1e6) return '1 in ' + (n < 10 ? n.toFixed(1) : Math.round(n).toLocaleString('en-US'));
+  let e = Math.floor(Math.log10(n));
+  let m = n / Math.pow(10, e);
+  if (m >= 9.95) { e += 1; m = n / Math.pow(10, e); }   // log10 can land a hair under a whole power: avoid "10.0 x 10^65"
+  return '1 in ' + m.toFixed(1) + ' x 10^' + e;
+}
+
+// ---------- generated tiers: 500 tiers and 100,000 items in all ----------
+// Order: Common Drops, the 25 original tiers, Particles, Elements, the generated tiers, then "You".
+const TOTAL_TIERS = 500;
+const TOTAL_ITEMS_TARGET = 100000;
+let GEN_COUNT = 0;
+let TOTAL_ITEMS = 0;
+
+const FAMILIES = [
+  { places: ['Ember', 'Pyre', 'Cinder', 'Blaze', 'Magma', 'Flare'], nouns: ['Crown', 'Forge', 'Hearth', 'Spire', 'Vault', 'Gate'],
+    adj: ['Smoldering', 'Molten', 'Charred', 'Searing', 'Scarlet', 'Blazing', 'Glowing', 'Burnt'],
+    items: ['Coal', 'Sigil', 'Ingot', 'Brand', 'Torch', 'Ash', 'Core', 'Cinder'],
+    motifs: ['orbs', 'rays', 'pulse'], colors: ['#ff6d00', '#ffab00', '#ff3d00', '#fff59d'], glyphs: 'ΦΨΩ', effects: ['ember', 'flicker'] },
+  { places: ['Frost', 'Glacier', 'Rime', 'Hail', 'Sleet', 'Polar'], nouns: ['Veil', 'Lattice', 'Crown', 'Shard', 'Throne', 'Spire'],
+    adj: ['Frozen', 'Crystal', 'Silent', 'Hollow', 'Pale', 'Azure', 'Keen', 'Glassy'],
+    items: ['Shard', 'Mirror', 'Storm', 'Peak', 'Fang', 'Dawn', 'Wind', 'Spire'],
+    motifs: ['facets', 'constellation', 'rings'], colors: ['#80d8ff', '#e0f7fa', '#00b0ff', '#ffffff'], glyphs: '✧✦✶', effects: ['frost', 'chroma'] },
+  { places: ['Tide', 'Abyss', 'Coral', 'Brine', 'Maelstrom', 'Pearl'], nouns: ['Trench', 'Sanctum', 'Reef', 'Gyre', 'Current', 'Depth'],
+    adj: ['Sunken', 'Tidal', 'Deep', 'Drifting', 'Briny', 'Silent', 'Pale', 'Lunar'],
+    items: ['Pearl', 'Anchor', 'Kelp', 'Conch', 'Whale', 'Coral', 'Lantern', 'Wave'],
+    motifs: ['ink', 'rings'], colors: ['#00b0ff', '#18ffff', '#2962ff', '#b3e5fc'], glyphs: '≈∽~', effects: ['wave', 'aurora'] },
+  { places: ['Storm', 'Thunder', 'Gale', 'Tempest', 'Volt', 'Surge'], nouns: ['Sky', 'Crest', 'Front', 'Rift', 'Engine', 'Crown'],
+    adj: ['Crackling', 'Howling', 'Violet', 'Rolling', 'Fierce', 'Restless', 'Wild', 'Iron'],
+    items: ['Bolt', 'Cloud', 'Gust', 'Spark', 'Coil', 'Fulmen', 'Gale', 'Arc'],
+    motifs: ['lightning', 'shards'], colors: ['#ffd740', '#ffffff', '#7c4dff', '#40c4ff'], glyphs: 'ϟ', effects: ['flicker', 'glitch'] },
+  { places: ['Verdant', 'Moss', 'Thorn', 'Sylvan', 'Bloom', 'Root'], nouns: ['Grove', 'Canopy', 'Bough', 'Mire', 'Glade', 'Heart'],
+    adj: ['Ancient', 'Mossy', 'Gentle', 'Wild', 'Emerald', 'Hushed', 'Dewy', 'Tangled'],
+    items: ['Fern', 'Vine', 'Acorn', 'Petal', 'Lichen', 'Sprout', 'Thistle', 'Oak'],
+    motifs: ['rays', 'glyphring'], colors: ['#76ff03', '#00e676', '#c6ff00', '#ccff90'], glyphs: 'ψφχ', effects: ['shimmer', 'frost'] },
+  { places: ['Nebula', 'Pulsar', 'Quasar', 'Nova', 'Comet', 'Orbit'], nouns: ['Drift', 'Halo', 'Ring', 'Cluster', 'Veil', 'Reach'],
+    adj: ['Distant', 'Luminous', 'Violet', 'Spinning', 'Dim', 'Radiant', 'Ancient', 'Vast'],
+    items: ['Star', 'Moon', 'Dust', 'Gyre', 'Pulse', 'Orb', 'Dawn', 'Tide'],
+    motifs: ['galaxy', 'warp'], colors: ['#e040fb', '#40c4ff', '#ffffff', '#ffd740'], glyphs: '✦✧⋆', effects: ['hologram', 'rainbow'] },
+  { places: ['Gear', 'Piston', 'Cog', 'Brass', 'Steam', 'Chrono'], nouns: ['Works', 'Engine', 'Dial', 'Loom', 'Tower', 'Forge'],
+    adj: ['Brass', 'Ticking', 'Polished', 'Wound', 'Copper', 'Steady', 'Riveted', 'Iron'],
+    items: ['Spring', 'Valve', 'Pendulum', 'Lever', 'Bolt', 'Escapement', 'Flywheel', 'Crank'],
+    motifs: ['bars', 'spiral'], colors: ['#ffd54f', '#ffb300', '#bcaaa4', '#fff8e1'], glyphs: '0123456789', effects: ['gold', 'shimmer'] },
+  { places: ['Rune', 'Sigil', 'Glyph', 'Ward', 'Hex', 'Grimoire'], nouns: ['Circle', 'Tome', 'Script', 'Seal', 'Rite', 'Gate'],
+    adj: ['Forbidden', 'Whispered', 'Inked', 'Luminous', 'Bound', 'Sealed', 'Warded', 'Lost'],
+    items: ['Word', 'Mark', 'Quill', 'Lexicon', 'Chant', 'Oath', 'Circle', 'Ward'],
+    motifs: ['glyphring', 'cracks'], colors: ['#ea80fc', '#b388ff', '#ffffff', '#7c4dff'], glyphs: 'ΑΒΓΔΖΘ', effects: ['neon', 'void'] },
+  { places: ['Null', 'Hollow', 'Umbra', 'Eclipse', 'Shade', 'Dusk'], nouns: ['Veil', 'Chasm', 'Mantle', 'Rift', 'Maw', 'Pit'],
+    adj: ['Lightless', 'Silent', 'Yawning', 'Unending', 'Dim', 'Forgotten', 'Sunless', 'Hungry'],
+    items: ['Echo', 'Whisper', 'Abyss', 'Stone', 'Shade', 'Crown', 'Breath', 'Hush'],
+    motifs: ['veil', 'cracks'], colors: ['#ff1744', '#4a0072', '#880e4f', '#ffffff'], glyphs: '∅◌', effects: ['void', 'glitch'] },
+  { places: ['Astral', 'Zenith', 'Solar', 'Lunar', 'Aurora', 'Radiant'], nouns: ['Sphere', 'Choir', 'Sanctum', 'Crest', 'Ring', 'Vigil'],
+    adj: ['Gilded', 'Hymned', 'Serene', 'Pure', 'Glorious', 'Lucent', 'Holy', 'Vast'],
+    items: ['Psalm', 'Halo', 'Dawn', 'Angel', 'Chorus', 'Vow', 'Beacon', 'Hymn'],
+    motifs: ['constellation', 'omega'], colors: ['#fff59d', '#ffffff', '#ffd740', '#82b1ff'], glyphs: 'ΩΨ✦', effects: ['gold', 'chroma'] },
+  { places: ['Sand', 'Mirage', 'Dune', 'Sun', 'Scarab', 'Sirocco'], nouns: ['Temple', 'Obelisk', 'Tomb', 'Oasis', 'Caravan', 'Gate'],
+    adj: ['Scorched', 'Ancient', 'Golden', 'Sunbaked', 'Lost', 'Endless', 'Dusty', 'Sacred'],
+    items: ['Scarab', 'Idol', 'Relic', 'Sphinx', 'Ankh', 'Dune', 'Mirage', 'Sun'],
+    motifs: ['arch', 'sunrise'], colors: ['#ffb300', '#ff8f00', '#fff3e0', '#ffcc80'], glyphs: 'XIVL', effects: ['ember', 'gold'] },
+  { places: ['Byte', 'Pixel', 'Echo', 'Signal', 'Static', 'Node'], nouns: ['Stream', 'Grid', 'Relay', 'Core', 'Mesh', 'Gate'],
+    adj: ['Corrupted', 'Binary', 'Looping', 'Silent', 'Neon', 'Packet', 'Glitched', 'Cached'],
+    items: ['Packet', 'Thread', 'Socket', 'Bit', 'Frame', 'Cipher', 'Port', 'Kernel'],
+    motifs: ['datarain', 'grid'], colors: ['#00e676', '#76ff03', '#ffffff', '#00e5ff'], glyphs: '01', effects: ['glitch', 'flicker'] },
+  { places: ['Quartz', 'Opal', 'Onyx', 'Topaz', 'Jade', 'Garnet'], nouns: ['Lattice', 'Prism', 'Heart', 'Cut', 'Shard', 'Facet'],
+    adj: ['Polished', 'Radiant', 'Prismatic', 'Flawless', 'Rough', 'Glinting', 'Clear', 'Deep'],
+    items: ['Quartz', 'Opal', 'Onyx', 'Topaz', 'Jade', 'Garnet', 'Sapphire', 'Emerald'],
+    motifs: ['facets', 'rays'], colors: ['#f48fb1', '#80deea', '#ffffff', '#b388ff'], glyphs: '◆◇', effects: ['rainbow', 'frost'] },
+];
+
+// small deterministic hash, so every generated tier is identical on every visit
+function mix(x) {
+  x = Math.imul(x ^ (x >>> 16), 0x45d9f3b);
+  x = Math.imul(x ^ (x >>> 16), 0x45d9f3b);
+  return (x ^ (x >>> 16)) >>> 0;
+}
+
+// Item names: adjective + noun, all distinct within a tier (a number is added after 64 items)
+function itemName(fam, h, j) {
+  const a = (j + (h % 8)) % 8;
+  const b = (Math.floor(j / 8) + ((h >>> 3) % 8)) % 8;
+  const c = Math.floor(j / 64);
+  return fam.adj[a] + ' ' + fam.items[b] + (c ? ' ' + (c + 1) : '');
+}
+
+function initTiers() {
+  const originals = Object.keys(DATA).filter(k => k !== 'last_section' && Array.isArray(DATA[k]) && DATA[k].length > 0);
+  for (const [key, t] of Object.entries(NAMED_TIERS)) {
+    DATA[key] = t.items; NAMES[key] = t.title; STYLE[key] = t.style; CUT[key] = t.cut; SYMBOLS[key] = t.symbol;
+  }
+  const head = ['common_section'];
+  const tail = ['particle_section', 'element_section'];
+  GEN_COUNT = TOTAL_TIERS - head.length - originals.length - tail.length - 1;
+
+  // item counts: generated tiers take whatever is left of the 100,000, around 208 each
+  const fixed = [...head, ...originals, ...tail, 'last_section'].reduce((a, k) => a + DATA[k].length, 0);
+  const need = TOTAL_ITEMS_TARGET - fixed;
+  const sizes = Array.from({ length: GEN_COUNT }, (_, g) => Math.floor(need / GEN_COUNT) + (mix(g + 3) % 41) - 20);
+  sizes[GEN_COUNT - 1] += need - sizes.reduce((a, b) => a + b, 0);
+
+  const generated = [];
+  for (let g = 0; g < GEN_COUNT; g++) {
+    const ti = head.length + originals.length + tail.length + g;
+    const fam = FAMILIES[g % FAMILIES.length];
+    const h = mix(g + 1), h2 = mix(h ^ 0x9e3779b9), h3 = mix(h2 ^ 0x85ebca6b);
+    const key = 'g' + String(g).padStart(4, '0');
+    const items = [];
+    for (let j = 0; j < sizes[g]; j++) items.push(itemName(fam, h2, j));
+    const c0 = pick(fam.colors, h), c1 = pick(fam.colors, h + 1 + (h2 % 3));
+    DATA[key] = items;
+    NAMES[key] = pick(fam.places, h) + ' ' + pick(fam.nouns, h2) + ' ' + (ti + 1);
+    STYLE[key] = [pick(fam.effects, h3), c0];
+    CUT[key] = [pick(fam.motifs, h2), [c0, c1, '#ffffff'], fam.glyphs];
+    SYMBOLS[key] = [...fam.glyphs][h % [...fam.glyphs].length];
+    generated.push(key);
+  }
+
+  TIER_KEYS = [...head, ...originals, ...tail, ...generated, 'last_section'];
+  TIER_INDEX = Object.fromEntries(TIER_KEYS.map((k, i) => [k, i]));
+  CUT_START = TIER_INDEX.greek_section;      // the cutscene ramp starts at the Greek section
+  CUT_END = TIER_KEYS.length - 1;            // "You"
+  TOTAL_ITEMS = TIER_KEYS.reduce((a, k) => a + DATA[k].length, 0);
+  buildOdds(TIER_KEYS.length);
+}
+
+// ---------- special scenes ----------
+const EDGE_PLANES = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]];
+
+// Dimension cube: the counter climbs to the rolled dimension while the cube gains dimensions
+// (point, line, square, cube, then a tesseract) and spins through 4D.
+function drawCube(t, p) {
+  const g = fxG, I = cut.Ib, n = cut.dimN;
+  const D = Math.min(n, 1 + Math.floor(p * n));
+  if (D !== cut.lastD) {
+    cut.lastD = D;
+    cut.kick = 0.5;
+    if (D <= 4) { cut.kick = 1; flash(0.2); }
+    fxText(cutBig, ordinal(D) + ' Dimension', 'dimension_section');
+  }
+  const k = Math.min(4, D);
+  const ang = [t * 0.7, t * 0.45 + 0.4, t * 0.9, t * 0.35, t * 0.6, t * 0.5];
+  const K = Math.min(W, H) * 2.2;
+  const pts = [];
+  for (let m = 0; m < (1 << k); m++) {
+    const v = [0, 0, 0, 0];
+    for (let b = 0; b < k; b++) v[b] = (m >> b) & 1 ? 1 : -1;
+    EDGE_PLANES.forEach(([i, j], idx) => {
+      const c = Math.cos(ang[idx]), s = Math.sin(ang[idx]);
+      const vi = v[i], vj = v[j];
+      v[i] = c * vi - s * vj;
+      v[j] = s * vi + c * vj;
+    });
+    const f4 = 1 / (4 - v[3]);
+    const f3 = 1 / (6 - v[2] * f4);
+    pts.push({ x: W / 2 + v[0] * f4 * f3 * K, y: H / 2 + v[1] * f4 * f3 * K });
+  }
+  g.lineWidth = 2;
+  for (let a = 0; a < pts.length; a++) {
+    for (let b = a + 1; b < pts.length; b++) {
+      const diff = a ^ b;
+      if (diff & (diff - 1)) continue;          // an edge joins vertices that differ in one coordinate
+      const A = pts[a], B = pts[b], col = pick(cut.colors, a + b);
+      g.strokeStyle = col; g.shadowColor = col; g.shadowBlur = 12;
+      g.globalAlpha = 0.85;
+      g.beginPath(); g.moveTo(A.x, A.y); g.lineTo(B.x, B.y); g.stroke();
+    }
+  }
+  g.shadowBlur = 0; g.globalAlpha = 1;
+  g.fillStyle = '#ffffff';
+  for (const P of pts) { g.beginPath(); g.arc(P.x, P.y, 2 + 2 * I, 0, Math.PI * 2); g.fill(); }
+}
+
+// Scaled II: each letter slot runs A to Z, then stops in place, one after another.
+// Background: a glow, falling letters and a scan line. T is the warped motion clock, eb the real seconds.
+function drawLetters(T, eb) {
+  const g = fxG;
+  const beat = 0.5 + 0.5 * Math.sin(T * 4);
+  const glow = g.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.min(W, H) * (0.3 + 0.1 * beat));
+  glow.addColorStop(0, 'rgba(0, 255, 179, 0.28)');
+  glow.addColorStop(1, 'rgba(0, 255, 179, 0)');
+  g.fillStyle = glow;
+  g.fillRect(-40, -40, W + 80, H + 80);
+  mGlyphs(T, cut.Ib, cut.colors);
+  const y = wrap(T * H * 0.9, H + 40) - 20;
+  g.globalAlpha = 0.35;
+  g.fillStyle = cut.colors[0];
+  g.fillRect(-20, y, W + 40, 3);
+  g.globalAlpha = 1;
+  updateSlots(eb);
+}
+
+// Slots land at fixed times in real seconds; before that they cycle A to Z
+function updateSlots(e) {
+  cut.slotEls.forEach((el, i) => {
+    if (e >= cut.slotStops[i]) {
+      if (!el.classList.contains('landed')) {
+        el.classList.add('landed', 'land');
+        el.textContent = cut.target[i];
+        cut.kick = Math.max(cut.kick, 0.8);
+        flash(0.12);
+      }
+    } else {
+      el.textContent = GLYPH_LATIN[Math.floor(e * 30 + i * 9) % 26];
+    }
+  });
+}
+
+// Finale ("You"): every mode at once, the burst that leads into the reveal.
+function drawFinale(t, p) {
+  const cols = cut.colors;
+  mSpiral(t, p, 1, cols, false);
+  mRings(t, p, 1, cols);
+  mShards(t, 1, cols);
+  if (p > 0.35) mLightning(p, 1, cols);
+}
+
+// ---------- roll flow ----------
+const rollBtn = document.getElementById('rollBtn');
+const recentCard = document.getElementById('recentCard');
+const recentTierEl = document.getElementById('recentTier');
+const recentEl = document.getElementById('recentItem');
+const bestTierEl = document.getElementById('bestTier');
+const bestEl = document.getElementById('bestItem');
+let busy = false;
+
+// Odds are logarithmic (odds.js). Tiers with no cutscene land at once.
+function rollRandom() {
+  if (busy) return;
+  const ti = pickTier();
+  const ii = pickItem(DATA[TIER_KEYS[ti]].length);
+  busy = true;
+  rollBtn.disabled = true;
+  startCut(ti, ii, () => settle(ti, ii));
+}
+
+// Runs when the screen is back: the roll goes into Most recent and, if it is the furthest, Best roll.
+function settle(ti, ii) {
+  const key = TIER_KEYS[ti];
+  if (!state.found[key]) state.found[key] = [];
+  if (!state.found[key].includes(ii)) state.found[key].push(ii);
+  state.rolls = (state.rolls || 0) + 1;
+  state.recent = [key, ii];
+  if (!state.best || rankOf(state.recent) > rankOf(state.best)) state.best = [key, ii];
+  save();
+  showRoll(state.recent, recentTierEl, recentEl);
+  showRoll(state.best, bestTierEl, bestEl);
+  recentCard.classList.remove('pop');
+  void recentCard.offsetWidth;
+  recentCard.classList.add('pop');
+  refreshProgress();
+  busy = false;
+  rollBtn.disabled = false;
+}
+
+function showRoll(pair, tierEl, itemEl) {
+  if (!pair) { tierEl.textContent = '—'; itemEl.textContent = ''; return; }
+  tierEl.textContent = prettyName(pair[0]);
+  fxText(itemEl, DATA[pair[0]][pair[1]], pair[0]);
+}
+
+// ---------- the branch: every tier on one tree that grows from the centre. Move the mouse to look around. ----------
+const branchC = document.getElementById('branch');
+const bG = branchC.getContext('2d');
+const tipEl = document.getElementById('tip');
+const WORLD = 1250;                                   // half the width of the world the branch sits in
+const BTN_RESET = { x: 1120, y: -1040, label: 'Reset', color: '#ff5252' };
+const BTN_ACH = { x: -1120, y: 1040, label: 'Achievements', color: '#ffd740' };
+const BTN_W = 170, BTN_H = 42;
+let BRANCH_NODES = [], BRANCH_EDGES = [];
+let branchOpen = false, branchRaf = 0;
+let bCamX = 0, bCamY = 0, bTgtX = 0, bTgtY = 0, bPanX = 0, bPanY = 0;
+let hoverNode = -1, pressX = 0, pressY = 0;
+
+const cutActive = () => cut !== null;
+
+// Symbol for a tier: its own, or the first glyph of its cutscene
+function symbolFor(key) {
+  if (SYMBOLS[key]) return SYMBOLS[key];
+  const g = CUT[key] && CUT[key][2];
+  return g ? [...g][0] : '◇';
+}
+
+// Grows the tree breadth-first from the centre, so tiers nearer the centre come first in the list
+function layoutBranch() {
+  const total = TIER_KEYS.length;
+  const nodes = [{ x: 0, y: 0, ang: -Math.PI / 2, r: 0, depth: 0, parent: -1, ti: -1 }];
+  const edges = [];
+  for (let pi = 0; nodes.length < total + 1; pi++) {
+    const P = nodes[pi];
+    const kids = P.depth === 0 ? 6 : 2 + (mix(pi * 97 + 13) % 2);
+    const spread = P.depth === 0 ? 0 : Math.max(0.5, 1.4 / (1 + 0.3 * P.depth));
+    for (let k = 0; k < kids && nodes.length < total + 1; k++) {
+      const jitter = ((mix(pi * 31 + k) % 1000) / 1000 - 0.5) * 0.28;
+      const ang = P.depth === 0
+        ? (k / kids) * Math.PI * 2 - Math.PI / 2 + jitter
+        : P.ang + (k - (kids - 1) / 2) * spread / kids * 2 + jitter;
+      const r = P.r + (P.depth === 0 ? 150 : 120 + (mix(pi * 13 + k) % 60));
+      nodes.push({ x: Math.cos(ang) * r, y: Math.sin(ang) * r, ang, r, depth: P.depth + 1, parent: pi, ti: nodes.length - 1 });
+      edges.push([pi, nodes.length - 1]);
+    }
+  }
+  BRANCH_NODES = nodes;
+  BRANCH_EDGES = edges;
+}
+
+function sizeBranch() {
+  branchC.width = Math.round(W * DPR); branchC.height = Math.round(H * DPR);
+  branchC.style.width = W + 'px'; branchC.style.height = H + 'px';
+  bPanX = Math.max(0, WORLD - W / 2 + 60);             // how far the parallax can move the view
+  bPanY = Math.max(0, WORLD - H / 2 + 60);
+}
+
+// Screen position of a world point, for the current camera
+const toScreenX = x => W / 2 - bCamX + x;
+const toScreenY = y => H / 2 - bCamY + y;
+
+function nearestNode(sx, sy) {
+  let best = -1, bestD = 22;
+  BRANCH_NODES.forEach((nd, i) => {
+    if (nd.ti < 0) return;
+    const d = Math.hypot(toScreenX(nd.x) - sx, toScreenY(nd.y) - sy);
+    if (d < bestD) { bestD = d; best = i; }
+  });
+  return best;
+}
+
+function buttonAt(sx, sy) {
+  const wx = sx - W / 2 + bCamX, wy = sy - H / 2 + bCamY;
+  for (const b of [BTN_RESET, BTN_ACH]) {
+    if (Math.abs(wx - b.x) < BTN_W / 2 && Math.abs(wy - b.y) < BTN_H / 2) return b;
+  }
+  return null;
+}
+
+function drawButton(b) {
+  const x = toScreenX(b.x) - BTN_W / 2, y = toScreenY(b.y) - BTN_H / 2;
+  bG.globalAlpha = 1;
+  bG.fillStyle = '#000';
+  bG.strokeStyle = b.color; bG.lineWidth = 1.5;
+  bG.shadowColor = b.color; bG.shadowBlur = 14;
+  bG.beginPath();
+  if (bG.roundRect) bG.roundRect(x, y, BTN_W, BTN_H, BTN_H / 2); else bG.rect(x, y, BTN_W, BTN_H);
+  bG.fill(); bG.stroke();
+  bG.shadowBlur = 0;
+  bG.fillStyle = '#f2f2f2';
+  bG.font = '600 13px system-ui, sans-serif';
+  bG.textAlign = 'center'; bG.textBaseline = 'middle';
+  bG.fillText(b.label.toUpperCase(), toScreenX(b.x), toScreenY(b.y) + 1);
+}
+
+function branchFrame() {
+  branchRaf = 0;
+  if (!branchOpen) return;
+  bCamX += (bTgtX - bCamX) * 0.08;
+  bCamY += (bTgtY - bCamY) * 0.08;
+  bG.setTransform(DPR, 0, 0, DPR, 0, 0);
+  bG.clearRect(0, 0, W, H);
+  bG.lineCap = 'round';
+  for (const [a, b] of BRANCH_EDGES) {                  // branches, thinner further out
+    const A = BRANCH_NODES[a], B = BRANCH_NODES[b];
+    bG.strokeStyle = 'rgba(232, 236, 255, 0.35)';
+    bG.lineWidth = Math.max(1, 5 - B.depth * 0.6);
+    bG.beginPath(); bG.moveTo(toScreenX(A.x), toScreenY(A.y)); bG.lineTo(toScreenX(B.x), toScreenY(B.y)); bG.stroke();
+  }
+  bG.font = '16px system-ui, sans-serif';
+  bG.textAlign = 'center'; bG.textBaseline = 'middle';
+  BRANCH_NODES.forEach((nd, i) => {                     // one symbol per tier
+    if (nd.ti < 0) return;
+    const sx = toScreenX(nd.x), sy = toScreenY(nd.y);
+    if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) return;
+    const key = TIER_KEYS[nd.ti], got = (state.found[key] || []).length > 0;
+    const col = STYLE[key] ? STYLE[key][1] : '#ffffff';
+    const hot = i === hoverNode;
+    bG.globalAlpha = got || hot ? 1 : 0.45;
+    bG.fillStyle = '#000';
+    bG.strokeStyle = col; bG.lineWidth = hot ? 3 : 1.5;
+    bG.shadowColor = col; bG.shadowBlur = got || hot ? 14 : 0;
+    bG.beginPath(); bG.arc(sx, sy, hot ? 20 : 15, 0, Math.PI * 2); bG.fill(); bG.stroke();
+    bG.shadowBlur = 0;
+    bG.fillStyle = got ? col : '#ffffff';
+    bG.fillText(symbolFor(key), sx, sy + 1);
+  });
+  bG.globalAlpha = 1;
+  drawButton(BTN_RESET);
+  drawButton(BTN_ACH);
+  branchRaf = requestAnimationFrame(branchFrame);
+}
+
+// The tooltip for the tier under the mouse
+function updateTip(x, y) {
+  if (hoverNode < 0) { tipEl.hidden = true; return; }
+  const key = TIER_KEYS[BRANCH_NODES[hoverNode].ti];
+  const got = (state.found[key] || []).length;
+  tipEl.textContent = '';
+  const t = document.createElement('strong');
+  fxText(t, prettyName(key), key);
+  const line = document.createElement('div');
+  line.textContent = symbolFor(key) + '  ' + DATA[key].length + ' items · ' + got + ' found · ' +
+    oddsText(tierChance(TIER_INDEX[key])) + ' a roll';
+  tipEl.append(t, line);
+  tipEl.hidden = false;
+  tipEl.style.left = Math.min(W - 280, x + 18) + 'px';
+  tipEl.style.top = Math.min(H - 80, y + 18) + 'px';
+}
+
+branchC.addEventListener('pointermove', e => {
+  if (!branchOpen || cutActive() || tierOpen) return;
+  bTgtX = (e.clientX / W * 2 - 1) * bPanX;              // the parallax: the view follows the mouse
+  bTgtY = (e.clientY / H * 2 - 1) * bPanY;
+  hoverNode = nearestNode(e.clientX, e.clientY);
+  updateTip(e.clientX, e.clientY);
+  branchC.style.cursor = hoverNode >= 0 || buttonAt(e.clientX, e.clientY) ? 'pointer' : 'default';
+});
+branchC.addEventListener('pointerdown', e => { pressX = e.clientX; pressY = e.clientY; });
+branchC.addEventListener('pointerup', e => {
+  if (!branchOpen || cutActive() || tierOpen || Math.hypot(e.clientX - pressX, e.clientY - pressY) > 6) return;
+  const b = buttonAt(e.clientX, e.clientY);
+  if (b === BTN_RESET) { openConfirm(); return; }
+  if (b === BTN_ACH) { openAch(); return; }
+  const i = nearestNode(e.clientX, e.clientY);
+  if (i >= 0) openTier(BRANCH_NODES[i].ti);
+});
+branchC.addEventListener('pointerleave', () => { hoverNode = -1; tipEl.hidden = true; });
+
+function openBranch() {
+  branchOpen = true;
+  document.body.classList.add('in-branch');
+  branchC.hidden = false;
+  sizeBranch();
+  bTgtX = 0; bTgtY = 0;
+  refreshProgress();
+  if (!branchRaf) branchRaf = requestAnimationFrame(branchFrame);
+}
+
+function closeBranch() {
+  closeConfirm(); closeAch(); closeTier();             // nothing stays open over the main screen
+  branchOpen = false;
+  document.body.classList.remove('in-branch');
+  branchC.hidden = true;
+  tipEl.hidden = true;
+  hoverNode = -1;
+}
+
+// ---------- achievements: checked after every roll; each unlock pops up in the top right ----------
+const ACHIEVEMENTS = [
+  { id: 'first', name: 'First Roll', text: 'Roll for the first time.', test: s => s.rolls >= 1 },
+  { id: 'roll10', name: 'Getting Warm', text: 'Roll 10 times.', test: s => s.rolls >= 10 },
+  { id: 'roll100', name: 'Regular', text: 'Roll 100 times.', test: s => s.rolls >= 100 },
+  { id: 'found10', name: 'Collector', text: 'Find 10 items.', test: s => s.found >= 10 },
+  { id: 'found100', name: 'Curator', text: 'Find 100 items.', test: s => s.found >= 100 },
+  { id: 'found1000', name: 'Archivist', text: 'Find 1,000 items.', test: s => s.found >= 1000 },
+  { id: 'tiers5', name: 'Wide Net', text: 'Find items in 5 different tiers.', test: s => s.tiers >= 5 },
+  { id: 'tiers20', name: 'Branching Out', text: 'Find items in 20 different tiers.', test: s => s.tiers >= 20 },
+  { id: 'greek', name: 'Ancient Letters', text: 'Find an item in the Greek section.', test: s => s.has('greek_section') },
+  { id: 'dimension', name: 'Fourth Dimension', text: 'Find an item in the Dimension section.', test: s => s.has('dimension_section') },
+  { id: 'particle', name: 'Particle Physicist', text: 'Find a particle.', test: s => s.has('particle_section') },
+  { id: 'element', name: 'Chemist', text: 'Find an element.', test: s => s.has('element_section') },
+  { id: 'elements10', name: 'Periodic', text: 'Find 10 elements.', test: s => s.countIn('element_section') >= 10 },
+  { id: 'constellation', name: 'Stargazer', text: 'Find an item in the Constellation section.', test: s => s.has('constellation_section') },
+  { id: 'you', name: 'You', text: 'Find "You". Good luck.', test: s => s.has('last_section') },
+];
+
+// The numbers the achievements test against, read from the saved state
+function achStats() {
+  const found = Object.values(state.found);
+  return {
+    rolls: state.rolls || 0,
+    found: found.reduce((a, arr) => a + arr.length, 0),
+    tiers: found.filter(arr => arr.length > 0).length,
+    has: k => (state.found[k] || []).length > 0,
+    countIn: k => (state.found[k] || []).length,
+  };
+}
+
+// Unlocks anything newly earned, shows each as a toast, and saves
+function checkAchievements() {
+  const s = achStats();
+  const fresh = [];
+  for (const a of ACHIEVEMENTS) {
+    if (!state.ach[a.id] && a.test(s)) { state.ach[a.id] = true; fresh.push(a); }
+  }
+  if (fresh.length) {
+    save();
+    fresh.forEach(showToast);
+    renderAchList();
+  }
+}
+
+// ---------- panels: a tier's items, achievements, toasts, the fade to black and the reset check ----------
+const veilEl = document.getElementById('veil');
+const tierPanel = document.getElementById('tierPanel');
+const tierTitle = document.getElementById('tierTitle');
+const tierMeta = document.getElementById('tierMeta');
+const tierItems = document.getElementById('tierItems');
+const achPanel = document.getElementById('achPanel');
+const achList = document.getElementById('achList');
+const achCount = document.getElementById('achCount');
+const confirmEl = document.getElementById('confirm');
+const toastsEl = document.getElementById('toasts');
+let tierOpen = false, tierKey = null, achOpen = false, confirmOpen = false, veilTimer = 0;
+
+// Black veil: on = fade to black, then call `then`; off = fade back to the screen (CSS does the fading)
+function fadeVeil(on, then) {
+  veilEl.classList.toggle('on', on);
+  clearTimeout(veilTimer);
+  veilTimer = setTimeout(() => { if (then) then(); }, 600);
+}
+
+// ---------- a tier's items: the title, its odds, and every item (??? until found) ----------
+function renderTierItems() {
+  const key = tierKey, have = state.found[key] || [];
+  fxText(tierTitle, prettyName(key), key);
+  tierMeta.textContent = oddsText(tierChance(TIER_INDEX[key])) + ' a roll · ' + have.length + ' / ' + DATA[key].length + ' found';
+  tierItems.textContent = '';
+  const frag = document.createDocumentFragment();
+  DATA[key].forEach((text, ii) => {
+    const li = document.createElement('li');
+    const span = document.createElement('span');
+    fxText(span, have.includes(ii) ? text : '???', key);
+    li.appendChild(span);
+    frag.appendChild(li);
+  });
+  tierItems.appendChild(frag);
+}
+
+function openTier(ti) {
+  if (cutActive() || tierOpen || achOpen || confirmOpen) return;
+  const key = TIER_KEYS[ti];
+  if (CUT[key][0] === 'none') {                         // no cutscene: fade to black, then the tier
+    fadeVeil(true, () => { showTierPanel(ti); fadeVeil(false); });
+    return;
+  }
+  startCut(ti, -1, () => showTierPanel(ti));          // the tier's own cutscene, then its items
+}
+
+function showTierPanel(ti) {
+  tierKey = TIER_KEYS[ti];
+  renderTierItems();
+  tierPanel.classList.add('open');
+  tierOpen = true;
+}
+
+function closeTier() {
+  tierPanel.classList.remove('open');
+  tierOpen = false;
+}
+
+// ---------- achievements: a list, opened after a fade to black ----------
+function renderAchList() {
+  const unlocked = ACHIEVEMENTS.filter(a => state.ach[a.id]).length;
+  achCount.textContent = unlocked + ' / ' + ACHIEVEMENTS.length + ' unlocked';
+  achList.textContent = '';
+  const frag = document.createDocumentFragment();
+  for (const a of ACHIEVEMENTS) {
+    const li = document.createElement('li');
+    li.className = state.ach[a.id] ? 'got' : '';
+    const name = document.createElement('strong');
+    name.textContent = state.ach[a.id] ? a.name : '???';
+    const text = document.createElement('span');
+    text.textContent = state.ach[a.id] ? a.text : 'Keep rolling to find out.';
+    li.append(name, text);
+    frag.appendChild(li);
+  }
+  achList.appendChild(frag);
+}
+
+function openAch() {
+  if (cutActive() || tierOpen || achOpen || confirmOpen) return;
+  fadeVeil(true, () => {
+    renderAchList();
+    achPanel.classList.add('open');
+    achOpen = true;
+    fadeVeil(false);
+  });
+}
+
+function closeAch() {
+  achPanel.classList.remove('open');
+  achOpen = false;
+}
+
+// A new achievement slides in from the left and fades in, stays for 2 seconds, then goes back out
+function showToast(a) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  const name = document.createElement('strong');
+  name.textContent = 'Achievement: ' + a.name;
+  const text = document.createElement('span');
+  text.textContent = a.text;
+  el.append(name, text);
+  toastsEl.appendChild(el);
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('in')));
+  setTimeout(() => el.classList.remove('in'), 2500);
+  setTimeout(() => el.remove(), 3200);
+}
+
+// ---------- reset, after an "Are you sure?" ----------
+function openConfirm() {
+  if (cutActive() || tierOpen || achOpen || confirmOpen) return;
+  confirmEl.hidden = false;
+  confirmOpen = true;
+}
+
+function closeConfirm() {
+  confirmEl.hidden = true;
+  confirmOpen = false;
+}
+
+function doReset() {
+  state = { found: {}, best: null, recent: null, rolls: 0, ach: {} };
+  save();
+  showRoll(null, recentTierEl, recentEl);
+  showRoll(null, bestTierEl, bestEl);
+  closeConfirm();
+  refreshProgress();
+}
+
+// ---------- progress: the count on the branch, the achievements, and an open tier list ----------
+function refreshProgress() {
+  const total = Object.values(state.found).reduce((a, arr) => a + arr.length, 0);
+  document.getElementById('branchCount').textContent = total + ' / ' + TOTAL_ITEMS + ' items found';
+  if (tierOpen) renderTierItems();
+  checkAchievements();
+  if (achOpen) renderAchList();
+}
+
+// ---------- keys ----------
+function onKey(e) {
+  if (e.key === 'Escape') {
+    if (confirmOpen) closeConfirm();
+    else if (tierOpen) closeTier();
+    else if (achOpen) closeAch();
+    else if (branchOpen) closeBranch();
+    else if (cutActive()) skipCut();
+    return;
+  }
+  if (cutActive()) { if (e.key === 'Enter' || e.code === 'Space') skipCut(); return; }
+  const tag = document.activeElement ? document.activeElement.tagName : '';
+  const overlay = branchOpen || tierOpen || achOpen || confirmOpen;
+  if (e.code === 'Space' && !e.repeat && !overlay && !['BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'].includes(tag)) {
+    e.preventDefault();
+    rollRandom();
+  }
+}
+
+// ---------- start ----------
+initTiers();          // builds all 500 tiers and their odds; must run before saved progress is read
+load();
+sizeAll();
+layoutBranch();
+sizeBranch();
+// achievements already earned are marked silently, so nothing pops up on a page load
+for (const a of ACHIEVEMENTS) if (!state.ach[a.id] && a.test(achStats())) state.ach[a.id] = true;
+showRoll(state.recent, recentTierEl, recentEl);
+showRoll(state.best, bestTierEl, bestEl);
+refreshProgress();
+rollBtn.addEventListener('click', rollRandom);
+document.getElementById('tiersBtn').addEventListener('click', openBranch);
+document.getElementById('branchClose').addEventListener('click', closeBranch);
+document.getElementById('achClose').addEventListener('click', closeAch);
+document.getElementById('tierClose').addEventListener('click', closeTier);
+document.getElementById('confirmYes').addEventListener('click', doReset);
+document.getElementById('confirmNo').addEventListener('click', closeConfirm);
+cutEl.addEventListener('click', skipCut);
+addEventListener('keydown', onKey);
+addEventListener('resize', () => { sizeAll(); sizeBranch(); });
+requestAnimationFrame(starLoop);
+
+</script>
+
+</body></html>
